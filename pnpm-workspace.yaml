@@ -1,0 +1,5 @@
+minimumReleaseAge: 1440
+strictDepBuilds: true
+onlyBuiltDependencies:
+  - core-js
+  - unrs-resolver

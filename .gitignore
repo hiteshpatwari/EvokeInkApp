@@ -1,0 +1,35 @@
+node_modules/
+.next/
+out/
+coverage/
+.env*
+!.env.example
+*.tsbuildinfo
+.playwright-cli/
+tmp/
+output/
+
+# Local tooling and hosting output
+.vercel/
+.wrangler/
+.open-next/
+*.log
+.DS_Store
+
+# Native build products and machine-specific configuration
+android/.gradle/
+android/local.properties
+android/**/build/
+ios/App/Pods/
+ios/App/build/
+DerivedData/
+
+# Signing and provisioning material must never enter source control
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.pem
+*.key
