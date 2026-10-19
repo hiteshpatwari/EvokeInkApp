@@ -12,12 +12,15 @@ A dependency-ordered production execution prompt now defines the low-cost web be
 
 P00 established a local Git repository on `main`, a key-free pinned GitHub Actions quality workflow, expanded secret/build-product ignores, and reproducible Node.js and pnpm setup metadata. No remote is configured because repository host and visibility remain an owner decision.
 
+The orchestrator added `.codex/production/ISSUE_REGISTER.md` on `main` at commit `936ce70`. P01, P03, and P04 were dispatched to isolated worktrees from baseline commit `c706a7c`. P05 was also dispatched but its agent stopped before making changes because the account-level agent usage limit was reached. All four task worktrees are currently clean at `c706a7c`; no task result has been integrated yet.
+
 ## Completed work
 
 - Created `.codex/production/PRODUCTION_EXECUTION_PROMPT.md` with 13 atomic work packages (P00-P12), agent ownership, dependency gates, acceptance criteria, human-only service checkpoints, and a dedicated service-onboarding contract.
 - Compared current hosting options. Cloudflare Workers is the first compatibility spike; Free remains conditional on measured 10 ms CPU behavior, Workers Paid is the preferred $5/month fallback, Netlify Free is the zero-cost fallback, and Vercel Pro is retained only for a documented compatibility failure.
 - Identified a production privacy blocker: the current browser-to-server generation contract includes the child name even though the OpenAI serializer later removes it. P03 now requires a network contract that omits child names and local IDs before public OpenAI mode.
 - Established the P00 source-control and reproducibility baseline. The local repository uses `main`; generated output, local environment files, and native signing material are ignored; CI runs frozen install, formatting, lint, typecheck, 62 tests, and build in mock mode.
+- Added the required production issue register with P00-P12 dependency and human-checkpoint status.
 
 - Accessible worksheet deletion confirmation with cancel, Escape, and focus restoration.
 - Child-profile deletion confirmation. Historical worksheet snapshots remain available and filterable after profile deletion.
@@ -33,8 +36,9 @@ P00 established a local Git repository on `main`, a key-free pinned GitHub Actio
 
 ## Files and areas currently changed
 
-- Application, storage, provider, accessibility, backup, and test changes are integrated across `src/`.
-- `STATUS.md`, `README.md`, and this workstate describe the integrated result and verified limitations.
+- `main` is clean at `936ce70` before this checkpoint update.
+- Isolated worktrees exist at `C:\projects\HandwrittenApp-worktrees\p01-cloudflare`, `p03-ai-controls`, `p04-privacy-security`, and `p05-mobile-spike`; each is clean at `c706a7c` at checkpoint time.
+- No P01, P03, P04, or P05 implementation commit has been integrated into `main`.
 
 ## Decisions
 
@@ -69,7 +73,9 @@ P00 established a local Git repository on `main`, a key-free pinned GitHub Actio
 - Cloudflare Workers Free compatibility and CPU headroom are unverified.
 - Child names currently reach the hosted Next.js prompt route and must be removed from the network contract before a public real-AI beta.
 - COPPA/store classification and OpenAI retention posture require owner and qualified privacy/legal review.
+- P05 execution is interrupted by the account-level subagent usage limit and must be retried when capacity is available. Its isolated worktree contains no changes.
+- P01, P03, and P04 were dispatched but had not produced filesystem changes or completion evidence at checkpoint time; their status must be rechecked before integration.
 
 ## Immediate next action
 
-Dispatch P01, P03, P04, and P05 in parallel from `.codex/production/PRODUCTION_EXECUTION_PROMPT.md`. Repository-host selection may proceed independently but must not block local branches and worktrees.
+Collect and review P01, P03, and P04 results when available. Retry P05 in its existing clean worktree when agent capacity resets. Integrate each accepted commit into `main` in dependency-safe order, update the issue register, run combined verification, and dispatch any atomic gap tasks. Repository-host selection may proceed independently but must not block local work.
