@@ -3,6 +3,7 @@
 Read & Reflect is a parent-facing, local-first web app for creating printable reading-to-writing worksheets. A parent chooses a child profile, describes a reading session, reviews four generated prompts, and prints or downloads a Letter-sized worksheet. The child reads the physical book and answers with pen and paper.
 
 Current functionality, verification evidence, and remaining work are tracked in [STATUS.md](./STATUS.md).
+The production data-flow inventory, threat model, retention gates, incident steps, and store-review inputs are under [`docs/security`](./docs/security/SECURITY_PRIVACY_BASELINE.md).
 
 ## Run locally
 

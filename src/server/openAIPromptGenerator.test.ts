@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { GenerationInput } from "@/domain/schemas";
-import { serializeOpenAIContext } from "@/server/openAIPromptGenerator";
+import {
+  OpenAIPromptGenerator,
+  serializeOpenAIContext,
+} from "@/server/openAIPromptGenerator";
 
 const input: GenerationInput = {
   child: {
@@ -40,5 +43,31 @@ describe("serializeOpenAIContext", () => {
       },
     });
     expect(context["child"]).not.toHaveProperty("name");
+  });
+
+  it("disables OpenAI response storage", async () => {
+    const output = {
+      prompts: Array.from({ length: 4 }, (_, index) => ({
+        text: "Choose one important idea and explain it using evidence.",
+        skill: "evidence_and_explanation",
+        explanation: "Practices a supported written explanation.",
+        required: index < 3,
+        suggestedResponseLength: "3-4 sentences",
+        grounding: "generic" as const,
+        difficultyLevel: "challenging" as const,
+      })),
+    };
+    const parse = vi.fn().mockResolvedValue({ output_parsed: output });
+    const client = {
+      responses: { parse },
+    } as unknown as ConstructorParameters<typeof OpenAIPromptGenerator>[2];
+
+    await new OpenAIPromptGenerator("test-key", "test-model", client).generate(
+      input,
+    );
+
+    expect(parse).toHaveBeenCalledWith(
+      expect.objectContaining({ store: false }),
+    );
   });
 });

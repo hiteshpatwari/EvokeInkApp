@@ -1299,6 +1299,12 @@ export function AppShell() {
                 ))}
               </div>
             </fieldset>
+            <p className="privacy-note">
+              When OpenAI generation is enabled, reading profile settings, book
+              details, progress, selected skills, and any notes you add are sent
+              to our AI service and OpenAI to create prompts. The child’s name
+              stays on this device.
+            </p>
             <div className="form-actions">
               <span className="privacy-note">
                 Book text is never downloaded or scraped.

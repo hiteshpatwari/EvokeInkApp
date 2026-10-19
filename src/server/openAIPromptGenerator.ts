@@ -38,20 +38,22 @@ export function serializeOpenAIContext(input: GenerationInput): string {
 }
 
 export class OpenAIPromptGenerator implements PromptGenerator {
-  private readonly client: OpenAI;
+  private readonly client: Pick<OpenAI, "responses">;
   private readonly model: string;
 
   constructor(
     apiKey: string,
     model = process.env["OPENAI_MODEL"] || "gpt-5-mini",
+    client?: Pick<OpenAI, "responses">,
   ) {
-    this.client = new OpenAI({ apiKey });
+    this.client = client ?? new OpenAI({ apiKey });
     this.model = model;
   }
 
   async generate(input: GenerationInput): Promise<PromptBatch> {
     const response = await this.client.responses.parse({
       model: this.model,
+      store: false,
       instructions: SYSTEM_INSTRUCTIONS,
       input: serializeOpenAIContext(input),
       text: {
