@@ -14,7 +14,6 @@ export default defineConfig({
     env: {
       ASSETS: bindings.assets(),
       AI_PROVIDER: bindings.text("mock"),
-      OPENAI_API_KEY: bindings.secret(),
     },
   }),
 });

@@ -2,11 +2,11 @@
 
 ## Objective
 
-Publish the current verified Read & Reflect `main` branch to its authorized private GitHub repository without exposing local credentials, generated output, or temporary artifacts.
+Complete P01 Cloudflare production feasibility, record the runtime decision, and leave P02 with explicit cost, security, and deployment gates.
 
 ## Current status
 
-The requested hardening functionality is integrated. Release documentation is synchronized, the final full quality suite is green, and the independent release re-review has no remaining findings. The project is published privately at `https://github.com/hiteshpatwari/HandWrittenApp` with `main` tracking `origin/main`.
+P01 is complete on the isolated `codex/p01-cloudflare` branch. An authenticated mock-only vinext Worker passed the required application and API probes after a Cloudflare global-scope initialization defect was fixed. Cloudflare Workers Free is rejected by measured CPU; Workers Paid is the selected P02 runtime, pending owner approval and resolution of two adapter dependency advisories.
 
 A dependency-ordered production execution prompt now defines the low-cost web beta, hosted AI safeguards, Capacitor release path, service-onboarding boundaries, store checkpoints, and independent final verification.
 
@@ -24,6 +24,9 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 - Implemented and integrated P03 AI safeguards with request-capture, high-concurrency quota and budget, timeout, provider-failure, origin/content-type/body-size, invalid-token recovery, nested unknown-field rejection, and privacy-safe event tests.
 - Integrated P04 security/privacy controls and synchronized its data-flow documentation after P03 removed child names from the network request.
 - Added `.codex/production/PRODUCTION_TEST_PLAN.md`, grounded in the current 15-file/79-test inventory, with release-blocking, dependency-gated, and post-launch suites.
+- Completed the P01 vinext spike on an authenticated temporary Worker. The home page, security headers, valid mock prompts, invalid input, private-field rejection, origin rejection, and privacy-safe operational events passed.
+- Measured Cloudflare CPU at 121 ms for the first home request and 24 ms for the valid mock prompt request, exceeding the Workers Free 10 ms limit. Selected Workers Paid for P02, subject to owner approval.
+- Fixed a deployed Worker error caused by generating a fallback UUID during route-module initialization. The prompt handler and environment config now initialize lazily inside the first request, with a regression test.
 
 - Accessible worksheet deletion confirmation with cancel, Escape, and focus restoration.
 - Child-profile deletion confirmation. Historical worksheet snapshots remain available and filterable after profile deletion.
@@ -40,8 +43,8 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 ## Files and areas currently changed
 
 - P03 and P04 application changes are integrated and committed on `main`.
-- The working tree is clean after the GitHub publication checkpoint commit.
-- P01 and P05 remain unimplemented because repeated agent attempts hit the account usage limit before modifying their clean worktrees.
+- P01 changes are isolated in `C:\projects\HandwrittenApp-worktrees\p01-cloudflare` on `codex/p01-cloudflare` and are pending final commit/integration.
+- P05 remains unimplemented.
 
 ## Decisions
 
@@ -53,6 +56,7 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 - Safari and physical-printer checks cannot be claimed on this Windows host unless actually available.
 - External account creation, legal agreements, identity checks, payment, MFA, CAPTCHA, store declarations, and production submissions remain owner actions. Agents may prepare, configure after authorization, and verify.
 - Real-AI public launch requires route abuse controls, spend limits, disclosure/consent review, and an approved OpenAI data-retention posture; a mock-only preview can precede those gates.
+- Cloudflare Workers Paid is the P02 target because live Worker CPU measurements exceeded the Free plan's 10 ms request limit.
 
 ## Validation already run
 
@@ -66,6 +70,9 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 - After merging P03 with P04, the focused AI boundary passed 20 tests, the full suite passed 79/79 tests, lint and typecheck passed, the mock production build passed, and `pnpm audit --audit-level=moderate` found no known vulnerabilities.
 - The repository-wide formatting check found only an ignored lifecycle snapshot; application and tracked documentation formatting are checked separately before commit.
 - GitHub publication preflight on 2026-10-20 passed the tracked-tree release audit with zero findings, found no key-shaped secrets in reachable history, and found no tracked or historical blobs at least 5 MB. Tracked-file Prettier, lint, typecheck, all 79 tests, production build, and `pnpm audit --audit-level=moderate` passed. The broad `pnpm format:check` still reports only ignored Codex lifecycle/state files.
+- P01 refreshed baseline: formatting, lint, canonical mock build, typecheck, and 80/80 tests passed. Focused AI and route initialization coverage passed 21/21 tests. Vinext reported 100% compatibility, and Cloudflare dry-run/upload size was 2380.52 KiB uncompressed / about 675.3 KiB gzip.
+- Authenticated Worker probes passed: home 200 with security headers, valid mock prompt 200 with four prompts and `no-store`, empty/private-field payloads 400, and disallowed origin 403. Real-time logs showed 121 ms CPU for first home load and 24 ms for valid mock prompt.
+- The temporary mock Worker was deleted after evidence capture; no public spike endpoint remains.
 
 ## Open issues and blockers
 
@@ -75,12 +82,13 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 - Controlled templates intentionally trade free-form OpenAI prose for enforceable no-invention behavior.
 - Telemetry remains deferred.
 - Key-free temporary validation copies under the ignored `tmp/` directory could not be recursively removed because command policy blocked deletion. They contain no `.env.local` or copied API key.
-- Cloudflare Workers Free compatibility and CPU headroom are unverified.
+- Cloudflare Workers Free fails the measured CPU gate. Workers Paid requires owner approval before P02 activation.
+- The vinext dependency chain adds one high `braces` advisory with no registry-published patch and one moderate `fflate` advisory. P02 must resolve them, prove affected code is build-only and absent from the deployed runtime with evidence, or reject vinext.
 - P03's in-memory quota/budget store is single-isolate only. Public OpenAI mode remains gated on a host-native atomic binding (Cloudflare Durable Object if Cloudflare is selected), a stable `AI_QUOTA_HASH_SECRET`, an exact production origin allowlist, and provider-side budget configuration. Native attestation remains dependent on P05's architecture decision.
 - COPPA/store classification and OpenAI retention posture require owner and qualified privacy/legal review.
-- P01 and P05 execution remain interrupted by the account-level subagent usage limit. Their isolated worktrees contain no changes.
+- P05 execution remains pending.
 - The read-only local Gemma test-planning pass was stopped after entering a telemetry-warning loop; it made no workspace changes. The primary session completed the plan from direct repository evidence.
 
 ## Immediate next action
 
-Execute P01 and select the deployment runtime, then bind `PromptControlStore` to the selected host's atomic store before enabling public OpenAI mode. Retry P05 when agent capacity is available. Use `.codex/production/PRODUCTION_TEST_PLAN.md` as the verification contract. Keep the GitHub repository private until the remaining public-launch gates are satisfied.
+Review and integrate the P01 branch, then begin P02 only after owner approval for Workers Paid. Resolve the adapter advisories, bind `PromptControlStore` to a Durable Object or equivalent atomic store, and keep real OpenAI mode disabled until deployed concurrency, secret, privacy, and rollback gates pass. P05 may proceed independently.
