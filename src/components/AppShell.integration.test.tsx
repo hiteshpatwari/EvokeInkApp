@@ -62,7 +62,7 @@ describe("Read & Reflect workflow", () => {
       screen.getByRole("button", { name: "Load the Prince Caspian example" }),
     );
     expect(screen.getByText(/sent to our AI service/i)).toHaveTextContent(
-      "When OpenAI generation is enabled, reading profile settings, book details, progress, selected skills, and any notes you add are sent to our AI service and OpenAI to create prompts. The child’s name stays on this device.",
+      "When OpenAI generation is enabled, reading profile settings, book details, progress, selected skills, and any notes you add are sent to our AI service and OpenAI to create prompts. The child’s name is not sent to OpenAI.",
     );
     await user.click(
       screen.getByRole("button", { name: "Generate 4 prompts" }),
