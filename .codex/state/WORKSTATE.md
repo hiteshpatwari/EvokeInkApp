@@ -6,7 +6,7 @@ Complete P01 Cloudflare production feasibility, record the runtime decision, and
 
 ## Current status
 
-P01 is complete on the isolated `codex/p01-cloudflare` branch. An authenticated mock-only vinext Worker passed the required application and API probes after a Cloudflare global-scope initialization defect was fixed. Cloudflare Workers Free is rejected by measured CPU; Workers Paid is the selected P02 runtime, pending owner approval and resolution of two adapter dependency advisories.
+P01 is complete and integrated on `main`. An authenticated mock-only vinext Worker passed the required application and API probes after a Cloudflare global-scope initialization defect was fixed. Cloudflare Workers Free is rejected by measured CPU; Workers Paid is the selected P02 runtime, pending owner approval and resolution of two adapter dependency advisories.
 
 A dependency-ordered production execution prompt now defines the low-cost web beta, hosted AI safeguards, Capacitor release path, service-onboarding boundaries, store checkpoints, and independent final verification.
 
@@ -43,7 +43,7 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 ## Files and areas currently changed
 
 - P03 and P04 application changes are integrated and committed on `main`.
-- P01 changes are isolated in `C:\projects\HandwrittenApp-worktrees\p01-cloudflare` on `codex/p01-cloudflare` and are pending final commit/integration.
+- P01 application, adapter, test, and decision-record changes are integrated on `main`.
 - P05 remains unimplemented.
 
 ## Decisions
@@ -91,4 +91,4 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 
 ## Immediate next action
 
-Review and integrate the P01 branch, then begin P02 only after owner approval for Workers Paid. Resolve the adapter advisories, bind `PromptControlStore` to a Durable Object or equivalent atomic store, and keep real OpenAI mode disabled until deployed concurrency, secret, privacy, and rollback gates pass. P05 may proceed independently.
+Begin P02 only after owner approval for Workers Paid. Resolve the adapter advisories, bind `PromptControlStore` to a Durable Object or equivalent atomic store, and keep real OpenAI mode disabled until deployed concurrency, secret, privacy, and rollback gates pass. P05 may proceed independently.
