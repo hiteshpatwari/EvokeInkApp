@@ -7,7 +7,7 @@ Last reviewed 2026-10-19. These are factual implementation inputs for the owner,
 - The product is operated by a parent or other adult to create a child's printable reading worksheet.
 - It supports profiles from early elementary through adult readers and stores a child name plus reading attributes locally on the device.
 - It has no child account, sign-in, social feature, advertising, analytics, location, contacts, camera, microphone, or tracking SDK.
-- Real-AI generation sends reading attributes, book metadata, selected skills, and optional free-text parent notes through the hosted relay to OpenAI. The public release must exclude the child name from the network payload.
+- Real-AI generation sends reading attributes, book metadata, selected skills, and optional free-text parent notes through the hosted relay to OpenAI. The dedicated network payload excludes the child name and local record identifiers.
 - Data is encrypted in transit when the production service is served exclusively over HTTPS. Local browser storage and user-downloaded backups are not application-encrypted.
 - Local data is user-deletable. Historical worksheet snapshots intentionally retain the profile values used at generation time until the worksheet is deleted.
 - The application does not currently offer a cloud account or retain an application database from which an operator can fulfill a server-side deletion request.
@@ -26,7 +26,7 @@ Last reviewed 2026-10-19. These are factual implementation inputs for the owner,
 
 Apple requires App Store Connect privacy details to cover the app and integrated third-party partners. The owner should evaluate these likely entries against the final build:
 
-- Name: stored locally; must not be collected off device after P03.
+- Name: stored locally and excluded from the P03 network payload.
 - Other user content: parent summary and notes are collected by the relay/OpenAI for app functionality when real AI is enabled.
 - Other data: reading profile attributes, book metadata, progress, and selected skills are collected for app functionality.
 - Tracking: none implemented.
@@ -39,7 +39,7 @@ Source: [Apple App privacy details](https://developer.apple.com/app-store/app-pr
 Google treats off-device transmission as collection for its Data safety form, including transmission to the developer's server and third-party SDKs. The owner should evaluate:
 
 - User IDs: none generated for a cloud account; local record IDs are not transmitted.
-- Personal info/name: local only after P03; verify with captured network traffic.
+- Personal info/name: local only in the implemented request contract; reconfirm with captured deployed network traffic.
 - App activity/other user-generated content: parent notes, summaries, reading metadata, and prompt inputs are transmitted for app functionality in real-AI mode.
 - Encryption in transit: yes only after deployed HTTPS verification.
 - Deletion: local deletion is available; there is no account or application database. Provider/host retention still requires an accurate policy answer.

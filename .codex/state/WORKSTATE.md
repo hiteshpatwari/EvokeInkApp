@@ -12,7 +12,7 @@ A dependency-ordered production execution prompt now defines the low-cost web be
 
 P00 established a local Git repository on `main`, a key-free pinned GitHub Actions quality workflow, expanded secret/build-product ignores, and reproducible Node.js and pnpm setup metadata. No remote is configured because repository host and visibility remain an owner decision.
 
-P04 is integrated on `main`. P03 is being integrated: its browser-to-server DTO excludes child names and local identifiers; the prompt route enforces bounded JSON, an origin allowlist, pseudonymous installation and IP quotas, an estimated monthly budget circuit, bounded provider execution, deterministic fallback, and content-free operational events. The local reference counter is not sufficient for a multi-instance public deployment; the selected host must bind the platform-neutral counter interface to an atomic shared store.
+P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child names and local identifiers; the prompt route enforces bounded JSON, an origin allowlist, pseudonymous installation and IP quotas, an estimated monthly budget circuit, bounded provider execution, deterministic fallback, and content-free operational events. P04 adds security headers, `store: false`, a just-in-time disclosure, threat/data-flow documentation, and incident/rotation guidance. The local reference counter is not sufficient for a multi-instance public deployment; the selected host must bind the platform-neutral interface to an atomic shared store.
 
 ## Completed work
 
@@ -21,7 +21,9 @@ P04 is integrated on `main`. P03 is being integrated: its browser-to-server DTO 
 - Resolved the production request-privacy blocker: the browser-to-server generation contract now omits child names and local IDs, and the route rejects unknown private fields.
 - Established the P00 source-control and reproducibility baseline. The local repository uses `main`; generated output, local environment files, and native signing material are ignored; CI runs frozen install, formatting, lint, typecheck, 62 tests, and build in mock mode.
 - Added the required production issue register with P00-P12 dependency and human-checkpoint status.
-- Implemented P03 AI safeguards with request-capture, high-concurrency quota and budget, timeout, provider-failure, origin/content-type/body-size, invalid-token recovery, nested unknown-field rejection, and privacy-safe event tests. The full suite now contains 76 passing tests on the P03 branch.
+- Implemented and integrated P03 AI safeguards with request-capture, high-concurrency quota and budget, timeout, provider-failure, origin/content-type/body-size, invalid-token recovery, nested unknown-field rejection, and privacy-safe event tests.
+- Integrated P04 security/privacy controls and synchronized its data-flow documentation after P03 removed child names from the network request.
+- Added `.codex/production/PRODUCTION_TEST_PLAN.md`, grounded in the current 15-file/79-test inventory, with release-blocking, dependency-gated, and post-launch suites.
 
 - Accessible worksheet deletion confirmation with cancel, Escape, and focus restoration.
 - Child-profile deletion confirmation. Historical worksheet snapshots remain available and filterable after profile deletion.
@@ -37,8 +39,9 @@ P04 is integrated on `main`. P03 is being integrated: its browser-to-server DTO 
 
 ## Files and areas currently changed
 
-- P03 changes are isolated to the prompt client DTO, prompt route, provider execution controls, related schemas and tests, `.env.example`, and `.codex/production/P03_AI_CONTROLS.md`.
-- P04 security/privacy changes are integrated on `main`; P01 and P05 remain unimplemented because their agents hit the account usage limit.
+- P03 and P04 application changes are integrated and committed on `main`.
+- Current uncommitted documentation changes are the production test plan and P03/P04 data-flow synchronization pending commit.
+- P01 and P05 remain unimplemented because repeated agent attempts hit the account usage limit before modifying their clean worktrees.
 
 ## Decisions
 
@@ -60,7 +63,8 @@ P04 is integrated on `main`. P03 is being integrated: its browser-to-server DTO 
 - Clean mock install: frozen install, formatting, lint, typecheck, tests, build, development and production HTTP startup, and mock prompt API passed.
 - Firefox and Playwright WebKit application and Letter print-media checks passed on Windows.
 - P00 proved a fresh key-free clone with `pnpm install --frozen-lockfile`, formatting, lint, typecheck, all 62 tests, and the production build. All checks passed after adding the repository-level LF policy required for reproducible Windows checkouts.
-- P03 passed `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, all 76 tests, and `AI_PROVIDER=mock pnpm build`. Its focused boundary suite passed 24 tests across the client DTO, route controls, provider policy, fallback, and application request capture.
+- After merging P03 with P04, the focused AI boundary passed 20 tests, the full suite passed 79/79 tests, lint and typecheck passed, the mock production build passed, and `pnpm audit --audit-level=moderate` found no known vulnerabilities.
+- The repository-wide formatting check found only an ignored lifecycle snapshot; application and tracked documentation formatting are checked separately before commit.
 
 ## Open issues and blockers
 
@@ -74,9 +78,9 @@ P04 is integrated on `main`. P03 is being integrated: its browser-to-server DTO 
 - Cloudflare Workers Free compatibility and CPU headroom are unverified.
 - P03's in-memory quota/budget store is single-isolate only. Public OpenAI mode remains gated on a host-native atomic binding (Cloudflare Durable Object if Cloudflare is selected), a stable `AI_QUOTA_HASH_SECRET`, an exact production origin allowlist, and provider-side budget configuration. Native attestation remains dependent on P05's architecture decision.
 - COPPA/store classification and OpenAI retention posture require owner and qualified privacy/legal review.
-- P05 execution is interrupted by the account-level subagent usage limit and must be retried when capacity is available. Its isolated worktree contains no changes.
-- P01, P03, and P04 were dispatched but had not produced filesystem changes or completion evidence at checkpoint time; their status must be rechecked before integration.
+- P01 and P05 execution remain interrupted by the account-level subagent usage limit. Their isolated worktrees contain no changes.
+- The read-only local Gemma test-planning pass was stopped after entering a telemetry-warning loop; it made no workspace changes. The primary session completed the plan from direct repository evidence.
 
 ## Immediate next action
 
-Complete merged P03 verification, then execute P01 and bind `PromptControlStore` to the selected host's atomic store before enabling public OpenAI mode. Retry P05 when agent capacity is available. Repository-host selection may proceed independently but must not block local work.
+Execute P01 and select the deployment runtime, then bind `PromptControlStore` to the selected host's atomic store before enabling public OpenAI mode. Retry P05 when agent capacity is available. Use `.codex/production/PRODUCTION_TEST_PLAN.md` as the verification contract. Repository-host selection may proceed independently but must not block local work.

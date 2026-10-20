@@ -4,12 +4,12 @@ Last verified against the repository on 2026-10-19.
 
 ## Release decision
 
-Mock mode is suitable for a key-free preview. Public OpenAI mode is blocked until all of these conditions are met:
+Mock mode is suitable for a key-free preview. P03 now removes `child.name` and local record identifiers from the browser-to-relay request. Public OpenAI mode remains blocked until all of these conditions are met:
 
-1. P03 removes `child.name` from the browser-to-relay request, not only from the relay-to-OpenAI request.
-2. The owner approves the product's age positioning, consent approach, publisher identity, support contact, privacy policy, and OpenAI retention posture with qualified legal advice where needed.
-3. The production host is configured to avoid request-body logging and to retain only the minimal request metadata described below.
-4. The production OpenAI project has Zero Data Retention enabled before processing personal data of a child under 13 or the applicable age of digital consent.
+1. The owner approves the product's age positioning, consent approach, publisher identity, support contact, privacy policy, and OpenAI retention posture with qualified legal advice where needed.
+2. The production host is configured to avoid request-body logging and to retain only the minimal request metadata described below.
+3. The production OpenAI project has Zero Data Retention enabled before processing personal data of a child under 13 or the applicable age of digital consent.
+4. The selected host supplies the shared atomic quota/budget store, stable hashing secret, trusted client-IP boundary, and exact production origin allowlist required by P03.
 
 OpenAI's under-18 guidance says not to process that personal data without Zero Data Retention. Zero Data Retention requires prior OpenAI approval. The Responses API is eligible, but standard API abuse-monitoring logs may contain customer content for up to 30 days. See [OpenAI under-18 guidance](https://developers.openai.com/api/docs/guides/safety-checks/under-18-api-guidance) and [OpenAI data controls](https://developers.openai.com/api/docs/guides/your-data).
 
@@ -33,11 +33,12 @@ Local records remain until the user deletes them, clears browser/app storage, re
 
 `POST /api/prompts` currently receives:
 
-- Child name, grade or age range, independent reading level, Lexile measure, preferred difficulty, and preferred response length.
+- Grade or age range, independent reading level, Lexile measure, preferred difficulty, and preferred response length. The dedicated network schema excludes the child name.
 - Book title, author, genre, and reading progress.
 - Specificity choice, selected skills, parent notes, parent summary, detail notes, and an optional mock variant number.
+- An opaque installation token in a request header for pseudonymous quota enforcement. Local profile and session IDs are not transmitted.
 
-This is the known P03 integration gap. The child name must be removed from the public network request schema and payload before real-AI release. Local profile and session IDs are not currently included. The response contains four generated prompts plus provider/fallback metadata and an optional generic notice.
+The route rejects unknown nested fields, including attempts to add a child name or local identifiers. The response contains four generated prompts plus provider/fallback metadata and an optional generic notice.
 
 The route validates input and does not intentionally persist or log request bodies. Responses from `/api/prompts` carry `Cache-Control: no-store`. Hosting-layer request capture is outside this repository and must be checked during deployment.
 
@@ -59,7 +60,7 @@ The hosted relay and OpenAI necessarily receive ordinary connection metadata suc
 
 Application code must never log request bodies, prompts, notes, summaries, names, book metadata, API keys, authorization headers, or provider responses. Current application code emits no production logs.
 
-If P03 adds operational logging, the allowed fields are:
+P03's operational event contract allows only:
 
 - generated request ID;
 - coarse timestamp and duration;
@@ -73,18 +74,18 @@ Recommended host retention is seven days for these metadata-only logs, unless a 
 
 ## Threat model
 
-| Threat                                        | Existing control                                                                         | Required follow-up                                                                               |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| OpenAI key exposed to a browser or repository | Server-only environment variable; no `NEXT_PUBLIC_` key; secret files ignored            | Scan release artifacts and host configuration; rotate on suspected exposure                      |
-| Child identity transmitted unnecessarily      | OpenAI serializer excludes name and IDs                                                  | P03 must remove the name before browser-to-relay transmission                                    |
-| Notes retained by provider                    | Responses request sets `store: false`                                                    | Obtain and enable Zero Data Retention or keep public real-AI mode disabled for applicable minors |
-| Sensitive content exposed in logs             | Application emits no request/response logs                                               | Disable body/header capture at CDN, Worker, and observability layers                             |
-| Cross-site framing or injected content        | CSP, frame denial, MIME sniffing protection, restrictive referrer and permissions policy | Verify headers at the deployed URL and revise CSP only for measured compatibility needs          |
-| Cross-site request abuse and spend exhaustion | Same-origin browser request and restrictive CSP                                          | P03 owns origin validation, body limits, quotas, timeouts, and budget circuit breaker            |
-| Malformed stored data or backup               | Zod validation, versioned backup schema, atomic replacement, corruption diagnostics      | Keep validation at every persistence/import boundary                                             |
-| Prompt injection or invented book facts       | No book-text fetch; structured output; grounding validation; controlled final templates  | Retain controlled rendering and schema validation when provider code changes                     |
-| Shared-device disclosure                      | Browser storage is readable to anyone using that browser profile                         | Tell users this is single-household local storage; provide deletion and backup controls          |
-| Dependency compromise                         | Exact versions and frozen lockfile; pinned CI action revisions                           | Run dependency audit for each release and review lockfile changes                                |
+| Threat                                        | Existing control                                                                         | Required follow-up                                                                                |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| OpenAI key exposed to a browser or repository | Server-only environment variable; no `NEXT_PUBLIC_` key; secret files ignored            | Scan release artifacts and host configuration; rotate on suspected exposure                       |
+| Child identity transmitted unnecessarily      | Dedicated browser network DTO and relay schema exclude name and local IDs                | Reconfirm against deployed network traffic and host logs                                          |
+| Notes retained by provider                    | Responses request sets `store: false`                                                    | Obtain and enable Zero Data Retention or keep public real-AI mode disabled for applicable minors  |
+| Sensitive content exposed in logs             | Application emits no request/response logs                                               | Disable body/header capture at CDN, Worker, and observability layers                              |
+| Cross-site framing or injected content        | CSP, frame denial, MIME sniffing protection, restrictive referrer and permissions policy | Verify headers at the deployed URL and revise CSP only for measured compatibility needs           |
+| Cross-site request abuse and spend exhaustion | Origin/body validation, bounded provider execution, quotas, and estimated budget circuit | Bind controls to the selected host's shared atomic store and configure provider-side spend limits |
+| Malformed stored data or backup               | Zod validation, versioned backup schema, atomic replacement, corruption diagnostics      | Keep validation at every persistence/import boundary                                              |
+| Prompt injection or invented book facts       | No book-text fetch; structured output; grounding validation; controlled final templates  | Retain controlled rendering and schema validation when provider code changes                      |
+| Shared-device disclosure                      | Browser storage is readable to anyone using that browser profile                         | Tell users this is single-household local storage; provide deletion and backup controls           |
+| Dependency compromise                         | Exact versions and frozen lockfile; pinned CI action revisions                           | Run dependency audit for each release and review lockfile changes                                 |
 
 ## Browser policy
 
@@ -92,7 +93,7 @@ Recommended host retention is seven days for these metadata-only logs, unless a 
 
 ## Verification checklist
 
-- Inspect the browser network request and verify no child name or local identifier appears after P03 integration.
+- Inspect the deployed browser network request and verify no child name or local identifier appears.
 - Inspect the relay-to-OpenAI request through a test double and verify `store: false` and serializer exclusions.
 - Verify security headers and `Cache-Control: no-store` against the deployed HTTPS URL.
 - Verify host logs using synthetic non-personal data and confirm bodies, headers, and content are absent.
