@@ -2,15 +2,15 @@
 
 ## Objective
 
-Finish the remaining Read & Reflect MVP hardening tasks through individually assigned agents, integrate their work, resolve discovered gaps, and report only after combined verification.
+Publish the current verified Read & Reflect `main` branch to its authorized private GitHub repository without exposing local credentials, generated output, or temporary artifacts.
 
 ## Current status
 
-The requested hardening functionality is integrated. Release documentation is synchronized, the final full quality suite is green, and the independent release re-review has no remaining findings.
+The requested hardening functionality is integrated. Release documentation is synchronized, the final full quality suite is green, and the independent release re-review has no remaining findings. The project is published privately at `https://github.com/hiteshpatwari/HandWrittenApp` with `main` tracking `origin/main`.
 
 A dependency-ordered production execution prompt now defines the low-cost web beta, hosted AI safeguards, Capacitor release path, service-onboarding boundaries, store checkpoints, and independent final verification.
 
-P00 established a local Git repository on `main`, a key-free pinned GitHub Actions quality workflow, expanded secret/build-product ignores, and reproducible Node.js and pnpm setup metadata. No remote is configured because repository host and visibility remain an owner decision.
+P00 established a Git repository on `main`, a key-free pinned GitHub Actions quality workflow, expanded secret/build-product ignores, and reproducible Node.js and pnpm setup metadata. The owner authorized a private GitHub repository under `hiteshpatwari`; `origin` now points to that repository.
 
 P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child names and local identifiers; the prompt route enforces bounded JSON, an origin allowlist, pseudonymous installation and IP quotas, an estimated monthly budget circuit, bounded provider execution, deterministic fallback, and content-free operational events. P04 adds security headers, `store: false`, a just-in-time disclosure, threat/data-flow documentation, and incident/rotation guidance. The local reference counter is not sufficient for a multi-instance public deployment; the selected host must bind the platform-neutral interface to an atomic shared store.
 
@@ -40,7 +40,7 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 ## Files and areas currently changed
 
 - P03 and P04 application changes are integrated and committed on `main`.
-- Current uncommitted documentation changes are the production test plan and P03/P04 data-flow synchronization pending commit.
+- The working tree is clean after the GitHub publication checkpoint commit.
 - P01 and P05 remain unimplemented because repeated agent attempts hit the account usage limit before modifying their clean worktrees.
 
 ## Decisions
@@ -65,6 +65,7 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 - P00 proved a fresh key-free clone with `pnpm install --frozen-lockfile`, formatting, lint, typecheck, all 62 tests, and the production build. All checks passed after adding the repository-level LF policy required for reproducible Windows checkouts.
 - After merging P03 with P04, the focused AI boundary passed 20 tests, the full suite passed 79/79 tests, lint and typecheck passed, the mock production build passed, and `pnpm audit --audit-level=moderate` found no known vulnerabilities.
 - The repository-wide formatting check found only an ignored lifecycle snapshot; application and tracked documentation formatting are checked separately before commit.
+- GitHub publication preflight on 2026-10-20 passed the tracked-tree release audit with zero findings, found no key-shaped secrets in reachable history, and found no tracked or historical blobs at least 5 MB. Tracked-file Prettier, lint, typecheck, all 79 tests, production build, and `pnpm audit --audit-level=moderate` passed. The broad `pnpm format:check` still reports only ignored Codex lifecycle/state files.
 
 ## Open issues and blockers
 
@@ -74,7 +75,6 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 - Controlled templates intentionally trade free-form OpenAI prose for enforceable no-invention behavior.
 - Telemetry remains deferred.
 - Key-free temporary validation copies under the ignored `tmp/` directory could not be recursively removed because command policy blocked deletion. They contain no `.env.local` or copied API key.
-- The local Git repository has no remote. The owner must choose or authorize the repository host and visibility before any push or hosted CI run.
 - Cloudflare Workers Free compatibility and CPU headroom are unverified.
 - P03's in-memory quota/budget store is single-isolate only. Public OpenAI mode remains gated on a host-native atomic binding (Cloudflare Durable Object if Cloudflare is selected), a stable `AI_QUOTA_HASH_SECRET`, an exact production origin allowlist, and provider-side budget configuration. Native attestation remains dependent on P05's architecture decision.
 - COPPA/store classification and OpenAI retention posture require owner and qualified privacy/legal review.
@@ -83,4 +83,4 @@ P03 and P04 are integrated on `main`. The browser-to-server DTO excludes child n
 
 ## Immediate next action
 
-Execute P01 and select the deployment runtime, then bind `PromptControlStore` to the selected host's atomic store before enabling public OpenAI mode. Retry P05 when agent capacity is available. Use `.codex/production/PRODUCTION_TEST_PLAN.md` as the verification contract. Repository-host selection may proceed independently but must not block local work.
+Execute P01 and select the deployment runtime, then bind `PromptControlStore` to the selected host's atomic store before enabling public OpenAI mode. Retry P05 when agent capacity is available. Use `.codex/production/PRODUCTION_TEST_PLAN.md` as the verification contract. Keep the GitHub repository private until the remaining public-launch gates are satisfied.
