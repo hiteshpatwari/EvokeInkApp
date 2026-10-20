@@ -3,3 +3,4 @@ strictDepBuilds: true
 onlyBuiltDependencies:
   - core-js
   - unrs-resolver
+  - workerd
