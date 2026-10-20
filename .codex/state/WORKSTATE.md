@@ -12,15 +12,16 @@ A dependency-ordered production execution prompt now defines the low-cost web be
 
 P00 established a local Git repository on `main`, a key-free pinned GitHub Actions quality workflow, expanded secret/build-product ignores, and reproducible Node.js and pnpm setup metadata. No remote is configured because repository host and visibility remain an owner decision.
 
-The orchestrator added `.codex/production/ISSUE_REGISTER.md` on `main` at commit `936ce70`. P01, P03, and P04 were dispatched to isolated worktrees from baseline commit `c706a7c`. P05 was also dispatched but its agent stopped before making changes because the account-level agent usage limit was reached. All four task worktrees are currently clean at `c706a7c`; no task result has been integrated yet.
+P04 is integrated on `main`. P03 is being integrated: its browser-to-server DTO excludes child names and local identifiers; the prompt route enforces bounded JSON, an origin allowlist, pseudonymous installation and IP quotas, an estimated monthly budget circuit, bounded provider execution, deterministic fallback, and content-free operational events. The local reference counter is not sufficient for a multi-instance public deployment; the selected host must bind the platform-neutral counter interface to an atomic shared store.
 
 ## Completed work
 
 - Created `.codex/production/PRODUCTION_EXECUTION_PROMPT.md` with 13 atomic work packages (P00-P12), agent ownership, dependency gates, acceptance criteria, human-only service checkpoints, and a dedicated service-onboarding contract.
 - Compared current hosting options. Cloudflare Workers is the first compatibility spike; Free remains conditional on measured 10 ms CPU behavior, Workers Paid is the preferred $5/month fallback, Netlify Free is the zero-cost fallback, and Vercel Pro is retained only for a documented compatibility failure.
-- Identified a production privacy blocker: the current browser-to-server generation contract includes the child name even though the OpenAI serializer later removes it. P03 now requires a network contract that omits child names and local IDs before public OpenAI mode.
+- Resolved the production request-privacy blocker: the browser-to-server generation contract now omits child names and local IDs, and the route rejects unknown private fields.
 - Established the P00 source-control and reproducibility baseline. The local repository uses `main`; generated output, local environment files, and native signing material are ignored; CI runs frozen install, formatting, lint, typecheck, 62 tests, and build in mock mode.
 - Added the required production issue register with P00-P12 dependency and human-checkpoint status.
+- Implemented P03 AI safeguards with request-capture, high-concurrency quota and budget, timeout, provider-failure, origin/content-type/body-size, invalid-token recovery, nested unknown-field rejection, and privacy-safe event tests. The full suite now contains 76 passing tests on the P03 branch.
 
 - Accessible worksheet deletion confirmation with cancel, Escape, and focus restoration.
 - Child-profile deletion confirmation. Historical worksheet snapshots remain available and filterable after profile deletion.
@@ -36,9 +37,8 @@ The orchestrator added `.codex/production/ISSUE_REGISTER.md` on `main` at commit
 
 ## Files and areas currently changed
 
-- `main` is clean at `936ce70` before this checkpoint update.
-- Isolated worktrees exist at `C:\projects\HandwrittenApp-worktrees\p01-cloudflare`, `p03-ai-controls`, `p04-privacy-security`, and `p05-mobile-spike`; each is clean at `c706a7c` at checkpoint time.
-- No P01, P03, P04, or P05 implementation commit has been integrated into `main`.
+- P03 changes are isolated to the prompt client DTO, prompt route, provider execution controls, related schemas and tests, `.env.example`, and `.codex/production/P03_AI_CONTROLS.md`.
+- P04 security/privacy changes are integrated on `main`; P01 and P05 remain unimplemented because their agents hit the account usage limit.
 
 ## Decisions
 
@@ -60,6 +60,7 @@ The orchestrator added `.codex/production/ISSUE_REGISTER.md` on `main` at commit
 - Clean mock install: frozen install, formatting, lint, typecheck, tests, build, development and production HTTP startup, and mock prompt API passed.
 - Firefox and Playwright WebKit application and Letter print-media checks passed on Windows.
 - P00 proved a fresh key-free clone with `pnpm install --frozen-lockfile`, formatting, lint, typecheck, all 62 tests, and the production build. All checks passed after adding the repository-level LF policy required for reproducible Windows checkouts.
+- P03 passed `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, all 76 tests, and `AI_PROVIDER=mock pnpm build`. Its focused boundary suite passed 24 tests across the client DTO, route controls, provider policy, fallback, and application request capture.
 
 ## Open issues and blockers
 
@@ -71,11 +72,11 @@ The orchestrator added `.codex/production/ISSUE_REGISTER.md` on `main` at commit
 - Key-free temporary validation copies under the ignored `tmp/` directory could not be recursively removed because command policy blocked deletion. They contain no `.env.local` or copied API key.
 - The local Git repository has no remote. The owner must choose or authorize the repository host and visibility before any push or hosted CI run.
 - Cloudflare Workers Free compatibility and CPU headroom are unverified.
-- Child names currently reach the hosted Next.js prompt route and must be removed from the network contract before a public real-AI beta.
+- P03's in-memory quota/budget store is single-isolate only. Public OpenAI mode remains gated on a host-native atomic binding (Cloudflare Durable Object if Cloudflare is selected), a stable `AI_QUOTA_HASH_SECRET`, an exact production origin allowlist, and provider-side budget configuration. Native attestation remains dependent on P05's architecture decision.
 - COPPA/store classification and OpenAI retention posture require owner and qualified privacy/legal review.
 - P05 execution is interrupted by the account-level subagent usage limit and must be retried when capacity is available. Its isolated worktree contains no changes.
 - P01, P03, and P04 were dispatched but had not produced filesystem changes or completion evidence at checkpoint time; their status must be rechecked before integration.
 
 ## Immediate next action
 
-Collect and review P01, P03, and P04 results when available. Retry P05 in its existing clean worktree when agent capacity resets. Integrate each accepted commit into `main` in dependency-safe order, update the issue register, run combined verification, and dispatch any atomic gap tasks. Repository-host selection may proceed independently but must not block local work.
+Complete merged P03 verification, then execute P01 and bind `PromptControlStore` to the selected host's atomic store before enabling public OpenAI mode. Retry P05 when agent capacity is available. Repository-host selection may proceed independently but must not block local work.

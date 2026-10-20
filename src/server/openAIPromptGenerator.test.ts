@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { GenerationInput } from "@/domain/schemas";
 import {
   OpenAIPromptGenerator,
+  openAIRequestPolicy,
   serializeOpenAIContext,
 } from "@/server/openAIPromptGenerator";
 
@@ -69,5 +70,19 @@ describe("serializeOpenAIContext", () => {
     expect(parse).toHaveBeenCalledWith(
       expect.objectContaining({ store: false }),
     );
+  });
+});
+
+describe("openAIRequestPolicy", () => {
+  it("bounds timeout, retries, and output tokens", () => {
+    process.env["OPENAI_TIMEOUT_MS"] = "999999";
+    process.env["OPENAI_MAX_RETRIES"] = "99";
+    expect(openAIRequestPolicy()).toEqual({
+      timeout: 30_000,
+      maxRetries: 2,
+      maxOutputTokens: 2_500,
+    });
+    delete process.env["OPENAI_TIMEOUT_MS"];
+    delete process.env["OPENAI_MAX_RETRIES"];
   });
 });

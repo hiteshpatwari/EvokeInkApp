@@ -14,6 +14,34 @@ export interface GenerationResult extends PromptBatch {
   notice?: string;
 }
 
+export interface GenerationOptions {
+  providerName?: string;
+  apiKey?: string;
+  primary?: PromptGenerator;
+  fallback?: PromptGenerator;
+  providerTimeoutMs?: number;
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new DOMException("Provider timed out", "TimeoutError")),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 export function validateGroundingForInput(
   input: GenerationInput,
   batch: PromptBatch,
@@ -53,12 +81,7 @@ async function renderControlledProviderBatch(
 
 export async function generateWithFallback(
   rawInput: unknown,
-  options: {
-    providerName?: string;
-    apiKey?: string;
-    primary?: PromptGenerator;
-    fallback?: PromptGenerator;
-  } = {},
+  options: GenerationOptions = {},
 ): Promise<GenerationResult> {
   const input = generationInputSchema.parse(rawInput);
   const providerName = (
@@ -90,7 +113,12 @@ export async function generateWithFallback(
   try {
     const primary =
       options.primary ?? new OpenAIPromptGenerator(apiKey as string);
-    const parsed = promptBatchSchema.parse(await primary.generate(input));
+    const parsed = promptBatchSchema.parse(
+      await withTimeout(
+        primary.generate(input),
+        options.providerTimeoutMs ?? 15_000,
+      ),
+    );
     return {
       ...(await renderControlledProviderBatch(input, parsed)),
       provider: "openai",

@@ -1,27 +1,22 @@
-import { NextResponse } from "next/server";
-import { ZodError } from "zod";
-import { generateWithFallback } from "@/server/generatePrompts";
+import {
+  ConsolePromptEventSink,
+  createPromptPostHandler,
+  InMemoryPromptControlStore,
+  promptApiConfigFromEnvironment,
+} from "@/server/promptApiControls";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
-  try {
-    const payload: unknown = await request.json();
-    const result = await generateWithFallback(payload);
-    return NextResponse.json(result);
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json(
-        {
-          message: "Please check the worksheet details and try again.",
-          issues: error.issues,
-        },
-        { status: 400 },
-      );
-    }
-    return NextResponse.json(
-      { message: "Prompts could not be generated. Please try again." },
-      { status: 500 },
-    );
-  }
-}
+const globalControls = globalThis as typeof globalThis & {
+  readReflectPromptControls?: InMemoryPromptControlStore;
+};
+const controls =
+  globalControls.readReflectPromptControls ?? new InMemoryPromptControlStore();
+globalControls.readReflectPromptControls = controls;
+
+export const POST = createPromptPostHandler({
+  controls,
+  config: promptApiConfigFromEnvironment(),
+  generationOptions: {},
+  events: new ConsolePromptEventSink(),
+});

@@ -16,6 +16,25 @@ Only use grounding "parent_summary" for facts present in the supplied summary an
 Use these exact skill identifiers when applicable: concise_summary, evidence_and_explanation, inference, cause_and_effect, character_motivation, conflict_and_problem_solving, theme_or_message, authors_purpose, comparison, prediction, personal_response.
 Prefer claim, evidence, and explanation. Keep the full worksheet completable in about 10-15 minutes.`;
 
+export function openAIRequestPolicy() {
+  const configuredTimeout = Number(process.env["OPENAI_TIMEOUT_MS"] ?? 15_000);
+  const configuredRetries = Number(process.env["OPENAI_MAX_RETRIES"] ?? 1);
+  return {
+    timeout: Math.min(
+      30_000,
+      Math.max(
+        1_000,
+        Number.isFinite(configuredTimeout) ? configuredTimeout : 15_000,
+      ),
+    ),
+    maxRetries: Math.min(
+      2,
+      Math.max(0, Number.isFinite(configuredRetries) ? configuredRetries : 1),
+    ),
+    maxOutputTokens: 2_500,
+  };
+}
+
 export function serializeOpenAIContext(input: GenerationInput): string {
   const mayUseNotes = input.specificity === "notes";
   return JSON.stringify({
@@ -46,7 +65,8 @@ export class OpenAIPromptGenerator implements PromptGenerator {
     model = process.env["OPENAI_MODEL"] || "gpt-5-mini",
     client?: Pick<OpenAI, "responses">,
   ) {
-    this.client = client ?? new OpenAI({ apiKey });
+    const { timeout, maxRetries } = openAIRequestPolicy();
+    this.client = client ?? new OpenAI({ apiKey, timeout, maxRetries });
     this.model = model;
   }
 
@@ -56,6 +76,7 @@ export class OpenAIPromptGenerator implements PromptGenerator {
       store: false,
       instructions: SYSTEM_INSTRUCTIONS,
       input: serializeOpenAIContext(input),
+      max_output_tokens: openAIRequestPolicy().maxOutputTokens,
       text: {
         format: zodTextFormat(promptBatchSchema, "reading_reflection_prompts"),
       },

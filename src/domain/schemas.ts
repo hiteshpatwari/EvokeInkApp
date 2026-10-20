@@ -71,6 +71,18 @@ export const generationInputSchema = z.object({
   variant: z.number().int().min(0).max(1000).optional(),
 });
 
+export const networkChildGenerationSchema = childGenerationSchema
+  .omit({ name: true })
+  .strict();
+
+export const networkGenerationInputSchema = generationInputSchema
+  .omit({ child: true, book: true })
+  .extend({
+    child: networkChildGenerationSchema,
+    book: bookSchema.strict(),
+  })
+  .strict();
+
 export const promptSchema = z.object({
   text: z.string().trim().min(15).max(800),
   skill: z.string().trim().min(2).max(80),
@@ -122,6 +134,9 @@ export type ResponseLength = z.infer<typeof responseLengthSchema>;
 export type ChildProfile = z.infer<typeof childProfileSchema>;
 export type Book = z.infer<typeof bookSchema>;
 export type GenerationInput = z.infer<typeof generationInputSchema>;
+export type NetworkGenerationInput = z.infer<
+  typeof networkGenerationInputSchema
+>;
 export type GeneratedPrompt = z.infer<typeof promptSchema>;
 export type PromptBatch = z.infer<typeof promptBatchSchema>;
 export type WorksheetPrompt = z.infer<typeof worksheetPromptSchema>;

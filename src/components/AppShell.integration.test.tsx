@@ -410,5 +410,12 @@ describe("Read & Reflect workflow", () => {
       child: { gradeOrAge: string };
     };
     expect(payload.child.gradeOrAge).toBe("Grade 3");
+    expect(payload.child).not.toHaveProperty("name");
+    expect(payload).not.toHaveProperty("profileId");
+    expect(payload).not.toHaveProperty("worksheetId");
+    expect(JSON.stringify(payload)).not.toContain(currentProfile.name);
+    expect(new Headers(request.headers).get("x-installation-token")).toMatch(
+      /^[0-9a-f-]{36}$/i,
+    );
   });
 });

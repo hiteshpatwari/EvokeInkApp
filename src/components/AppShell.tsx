@@ -18,6 +18,10 @@ import type {
   ResponseLength,
 } from "@/domain/schemas";
 import {
+  getInstallationToken,
+  toNetworkGenerationInput,
+} from "@/client/promptRequest";
+import {
   childProfileSchema,
   generationInputSchema,
   readingSessionSchema,
@@ -354,8 +358,11 @@ export function AppShell() {
   const requestPrompts = async (payload: GenerationInput) => {
     const response = await fetch("/api/prompts", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Installation-Token": getInstallationToken(),
+      },
+      body: JSON.stringify(toNetworkGenerationInput(payload)),
     });
     const body: unknown = await response.json();
     if (!response.ok)
