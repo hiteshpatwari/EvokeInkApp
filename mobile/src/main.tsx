@@ -4,6 +4,8 @@ import { App } from "@capacitor/app";
 import { AppShell } from "../../src/components/AppShell";
 import { createMobilePromptFetch } from "./promptTransport";
 import { installNativeBackHandler } from "./nativeBack";
+import { installWorksheetExporter } from "@/pdf/worksheetExport";
+import { nativeWorksheetExporter } from "./nativeWorksheetExport";
 import "../../src/app/globals.css";
 
 declare const __PROMPT_API_URL__: string;
@@ -14,6 +16,7 @@ window.fetch = createMobilePromptFetch(
 );
 
 document.documentElement.dataset["nativeApp"] = "true";
+installWorksheetExporter(nativeWorksheetExporter);
 void installNativeBackHandler(App, window);
 
 const root = document.getElementById("root");

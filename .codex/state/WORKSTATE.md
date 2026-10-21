@@ -2,100 +2,77 @@
 
 ## Objective
 
-Complete P06 Android usability and notes-grounding repairs before starting P07
-native PDF sharing or P08 native persistence.
+Complete the production mobile path after P06: P07 native PDF sharing is now
+verified; P08 authoritative native persistence and migration is next.
 
 ## Current status
 
-The Android Back and system-bar/safe-area defects and the notes-specific
-fallback grounding gaps are repaired on branch `codex/p06-ux-fixes`. Automated
-checks, independent UX code review, Android packaging, and emulator acceptance
-pass. P06 is verified. P07 is the next package, followed by P08.
+P07 is implemented and verified on branch `codex/p07-native-pdf`. Browser users
+retain Print and Download PDF. The Android client presents a truthful Share PDF
+action backed by official Capacitor Filesystem and Share plugins, keeps the PDF
+in application-private cache only for the chooser operation, and attempts
+cleanup for success, cancellation, and failure.
 
 ## Completed work
 
-- Added exact `@capacitor/app@8.0.1` integration. The Capacitor host dispatches
-  one cancellable native Back event; only an unconsumed Home event calls
-  `App.exitApp()`.
-- Added a shared Back transition for `preview → review → create → home` and
-  `profile/saved → home`.
-- AppShell consumes Back to dismiss session/profile deletion dialogs first,
-  restoring focus to the initiating control, and otherwise navigates through
-  the logical screen history. Browser behavior remains unchanged.
-- Added unit/component coverage for transitions, Capacitor listener behavior,
-  dialog dismissal, and AppShell screen navigation.
-- Enabled AndroidX edge-to-edge in `MainActivity` after bridge creation and
-  configured Capacitor SystemBars for CSS inset handling, a covered viewport,
-  visible bars, and dark icons on the light application background.
-- Applied top/right/bottom/left safe-area variables to the header, page,
-  preview, loading, fixed-dialog, and action regions; dynamic viewport height
-  replaces static-only viewport assumptions.
-- The native header is sticky over scrolled content. Narrow native layouts stack
-  navigation, hide the redundant logo/Home control, and reflow hero/navigation
-  text. This removes the font-scale 2.0 status collision and clipped Saved
-  reflections label without reducing normal-scale navigation text.
-- Updated `fflate` to 0.8.3 and added the root override needed to remove the
-  vulnerable transitive copy. The known vinext-only `braces@3.0.3` advisory
-  remains accepted because no patched release exists.
-- Preserved notes specificity, parent summary, parent notes, and detail notes
-  in the on-device deterministic fallback instead of degrading it to general
-  prompts.
-- The deterministic generator now handles detail-only notes and includes
-  bounded excerpts of both note fields when both are supplied.
-- Added integration coverage for empty-notes validation, the exact privacy-safe
-  request body, provenance labels, and notes-grounded offline fallback.
+- Added a host-neutral worksheet-export boundary. The browser default retains
+  existing jsPDF download behavior and reports that browser Print is available.
+- Added an injected native export adapter that emits the existing jsPDF bytes,
+  preserves every byte through base64 encoding, sanitizes and bounds the cache
+  filename, writes through `Directory.Cache`, and shares the returned content
+  URI through the Android chooser.
+- Added exact `@capacitor/filesystem@8.1.5` and `@capacitor/share@8.0.3`
+  dependencies and synchronized their Android projects.
+- Native preview copy now says `Share PDF` and omits the non-working browser
+  Print action. The control is disabled as `Preparing PDF…` while active.
+- Sharing success, cancellation, unavailable capability, and failure have
+  distinct user-visible outcomes. Cleanup failure is reported without hiding or
+  replacing the primary outcome.
+- Added automated coverage for bytes/base64, filename safety, success,
+  cancellation, failure, cleanup in every post-write path, cleanup failure,
+  unavailable sharing, duplicate-action prevention, host installation, and
+  browser regression.
+- Recorded full implementation and emulator evidence in
+  `.codex/production/P07_NATIVE_PDF_SHARING.md` and marked P07 verified.
 
 ## Files or areas changed
 
-- `mobile/src/nativeBack.ts`, `mobile/src/main.tsx`, mobile tests and config.
-- `mobile/android/**` plugin registration and AndroidX edge-to-edge host setup.
-- `src/client/nativeBack.ts`, `src/components/AppShell.tsx`, and associated
-  transition/component tests.
-- `src/app/globals.css` and `src/app/globals.test.ts` for safe-area, dynamic
-  viewport, sticky-header, and large-text behavior.
-- `package.json`, `mobile/package.json`, and `pnpm-lock.yaml` for exact native
-  plugin/security dependency state.
-- `mobile/src/promptTransport.ts`, the deterministic mock generator, and their
-  focused tests for notes-preserving fallback.
-- P06 audit and issue register for the completed device acceptance gate.
+- `src/pdf/worksheetExport.ts` and focused browser/host-boundary tests.
+- `src/components/AppShell.tsx` and focused PDF export UI tests.
+- `mobile/src/nativeWorksheetExport.ts`, its focused tests, and mobile bootstrap.
+- `mobile/package.json`, `pnpm-lock.yaml`, and synchronized Android plugin Gradle
+  files.
+- P07 production evidence, issue register, and this workstate.
 
 ## Validation evidence
 
-- RED phase: native Back tests initially failed because the transition/listener
-  modules did not exist.
-- Focused Back, edge-to-edge, config, component, and CSS regression tests pass.
-- Mobile Vite production build, Capacitor sync, and Gradle `assembleDebug` pass
-  with Microsoft JDK 21 and Android API 36. The existing large-chunk warning is
-  non-fatal.
-- On `Pixel_10_Pro_XL` (`emulator-5554`, API 37), Create → system Back returned
-  Home; profile deletion → system Back dismissed the dialog; the activity stayed
-  resumed.
-- Portrait, landscape, scrolling, dialogs, and font scale 2.0 were visually
-  checked after the final APK install. Navigation labels remain complete and
-  content stays outside system controls.
-- Keyboard-open acceptance at font scale 1.0 kept Book title focused and visible;
-  Android reported `mInputShown=true` and `mIsInputViewShown=true`.
-- Formatting, lint, root/mobile typecheck, 127 tests, Next production build,
-  configured mobile Vite build, Capacitor sync, artifact secret scan, and
-  Gradle `assembleDebug` passed.
-- The installed APK's hosted notes flow displayed parent-summary and
-  parent-notes provenance. With WebView networking emulated offline, the same
-  three note fields produced grounded deterministic prompts and the explicit
-  offline notice; both parentNotes and detailNotes appeared in the bounded
-  note-grounded prompt.
+- TDD RED failed because the native export module did not exist; GREEN passes.
+- Root Vitest: 28 files / 140 tests passed.
+- Mobile Vitest: 6 files / 30 tests passed.
+- Root/mobile TypeScript, lint, formatting, Next build, mobile Vite production
+  build, Capacitor sync, and artifact secret scan passed.
+- Java 21 / Android API 36 Gradle `assembleDebug` passed with 184 tasks executed.
+- APK install on `emulator-5554` returned Success. The installed saved worksheet
+  preview showed Share PDF and no browser-only Print control.
+- Android ChooserActivity opened with a content URI. The sanitized PDF existed
+  in private cache while the chooser was open; Android Back cancelled sharing,
+  the app reported cancellation, and the temporary PDF was removed.
+- APK permissions contain INTERNET and the application-scoped dynamic-receiver
+  permission only; no broad storage permission was added.
+- `pnpm audit --audit-level=moderate` continues to report only the documented
+  unpatched vinext-only `braces@3.0.3` exception.
 
 ## Open issues and blockers
 
-- P07 must implement native PDF cache/share/cleanup while preserving browser
-  download and print.
-- P08 must implement authoritative atomic Preferences state and verified
-  one-time WebView migration.
-- Native OpenAI mode remains intentionally blocked until platform attestation is
-  implemented; the deployed endpoint remains mock mode.
-- iOS compilation, signing, origin validation, and privacy manifests require
-  macOS/Xcode and remain P11 gates.
+- P08 must implement authoritative atomic Preferences state, startup hydration,
+  and verified one-time WebView localStorage migration with recovery tests.
+- P02 public OpenAI launch still requires paid hosting activation, production
+  secrets/origins, custom-domain decisions, and real-AI acceptance.
+- Native OpenAI remains blocked until platform attestation is verified.
+- iOS compilation, Filesystem privacy-manifest validation, sharing acceptance,
+  signing, and release evidence require macOS/Xcode under P11.
 
 ## Immediate next action
 
-Start P07 native PDF cache/share/cleanup while preserving browser download and
-print behavior, then complete P08.
+Independently review P07, then start P08 mobile persistence and migration without
+changing the verified PDF export boundary.
