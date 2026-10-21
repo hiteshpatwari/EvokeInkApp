@@ -14,14 +14,26 @@ const controls =
   globalControls.readReflectPromptControls ?? new InMemoryPromptControlStore();
 globalControls.readReflectPromptControls = controls;
 
-let postHandler: ReturnType<typeof createPromptPostHandler> | undefined;
+let postHandlerPromise:
+  | Promise<ReturnType<typeof createPromptPostHandler>>
+  | undefined;
 
-export function POST(request: Request) {
-  postHandler ??= createPromptPostHandler({
-    controls,
+async function createPostHandler() {
+  const promptControls =
+    process.env["PROMPT_CONTROL_STORE"] === "cloudflare"
+      ? new (
+          await import("@/server/cloudflarePromptControlStore")
+        ).CloudflarePromptControlStore()
+      : controls;
+  return createPromptPostHandler({
+    controls: promptControls,
     config: promptApiConfigFromEnvironment(),
     generationOptions: {},
     events: new ConsolePromptEventSink(),
   });
-  return postHandler(request);
+}
+
+export async function POST(request: Request) {
+  postHandlerPromise ??= createPostHandler();
+  return (await postHandlerPromise)(request);
 }

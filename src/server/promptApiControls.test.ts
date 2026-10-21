@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PromptGenerator } from "@/domain/promptGenerator";
 import type { NetworkGenerationInput } from "@/domain/schemas";
 import {
   createPromptPostHandler,
   InMemoryPromptControlStore,
+  promptApiConfigFromEnvironment,
   type PromptApiDependencies,
 } from "./promptApiControls";
 
@@ -27,6 +28,11 @@ const payload: NetworkGenerationInput = {
   parentSummary: "",
   detailNotes: "",
 };
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 function request(
   body: unknown = payload,
@@ -84,6 +90,26 @@ function dependencies(
 }
 
 describe("prompt API controls", () => {
+  it("requires a stable quota hash secret before OpenAI mode can start", () => {
+    vi.stubEnv("AI_PROVIDER", "openai");
+    vi.stubEnv("AI_QUOTA_HASH_SECRET", "");
+
+    expect(() => promptApiConfigFromEnvironment()).toThrow(
+      "AI_QUOTA_HASH_SECRET is required",
+    );
+  });
+
+  it("allows key-free mock mode without generating a runtime secret", () => {
+    vi.stubEnv("AI_PROVIDER", "mock");
+    vi.stubEnv("AI_QUOTA_HASH_SECRET", "");
+    const randomUUID = vi.spyOn(globalThis.crypto, "randomUUID");
+
+    expect(promptApiConfigFromEnvironment().quotaHashSecret).toBe(
+      "mock-only-no-quota-reservations",
+    );
+    expect(randomUUID).not.toHaveBeenCalled();
+  });
+
   it("accepts a valid privacy-minimized generation request", async () => {
     const response = await createPromptPostHandler(dependencies())(request());
     expect(response.status).toBe(200);

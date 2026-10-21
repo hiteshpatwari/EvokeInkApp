@@ -321,6 +321,14 @@ export function promptApiConfigFromEnvironment(): PromptApiConfig {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  const providerName = (process.env["AI_PROVIDER"] ?? "mock").toLowerCase();
+  const configuredQuotaHashSecret =
+    process.env["AI_QUOTA_HASH_SECRET"]?.trim() || undefined;
+  if (providerName === "openai" && !configuredQuotaHashSecret) {
+    throw new Error(
+      "AI_QUOTA_HASH_SECRET is required when AI_PROVIDER=openai.",
+    );
+  }
   return {
     allowedOrigins: origins,
     maxBodyBytes: numberFromEnvironment("AI_MAX_REQUEST_BYTES", 12_000),
@@ -336,7 +344,7 @@ export function promptApiConfigFromEnvironment(): PromptApiConfig {
       numberFromEnvironment("AI_ESTIMATED_REQUEST_COST_USD", 0.01) * 1_000_000,
     ),
     quotaHashSecret:
-      process.env["AI_QUOTA_HASH_SECRET"]?.trim() || crypto.randomUUID(),
+      configuredQuotaHashSecret ?? "mock-only-no-quota-reservations",
   };
 }
 
