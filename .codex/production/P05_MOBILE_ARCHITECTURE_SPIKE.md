@@ -2,10 +2,10 @@
 
 ## Status
 
-Architecture selected; the available Android emulator passed the local-first
-workflow, native PDF share, offline fallback, and upgrade-preservation checks.
-P05 remains open only for the hosted HTTPS prompt-API row, which needs the P02
-endpoint. iOS runtime checks cannot be completed on this Windows host.
+Verified. The available Android emulator passed the local-first workflow,
+authoritative native persistence, native PDF share, hosted HTTPS mock API,
+deterministic failure fallback, and upgrade-preservation checks. iOS runtime
+checks cannot be completed on this Windows host and remain a P11 gate.
 
 ## Compatibility finding
 
@@ -94,32 +94,48 @@ installed, compiled against platform 37 with an explicit proof-only override.
 P06 must pin the officially supported SDK combination rather than inherit this
 workaround.
 
-| Acceptance check                             | Observed evidence                                                                                                                                                              | Status                                                                         |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Bundled production UI starts without network | Wi-Fi and mobile data were disabled; bundled UI launched and displayed the saved profile and worksheet.                                                                        | passed                                                                         |
-| Create profile                               | Created `P05Reader` with Grade 5, independent level `Advanced`, Lexile `900L`, grade-level difficulty, and medium response length.                                             | passed                                                                         |
-| Mock generation                              | Generated four structured deterministic prompts with no API URL or API key, then saved the worksheet.                                                                          | passed                                                                         |
-| Hosted prompt API                            | Reach a configured HTTPS mock endpoint without any packaged secret, then make it unreachable and observe deterministic fallback.                                               | pending — requires the P02 endpoint and exact native-origin CORS configuration |
-| Save/reopen                                  | Force-stopped and relaunched; profile and Prince Caspian worksheet remained through the Preferences-backed proof mirror.                                                       | passed                                                                         |
-| Native PDF share                             | Android chooser received `the-chronicles-of-narnia-prince-caspian-reflection.pdf`; the Print target opened it as a two-page Letter document.                                   | passed                                                                         |
-| Offline fallback                             | With Wi-Fi and mobile data disabled, generation reached Prompt Review and displayed `Offline mode used reliable general prompts.`                                              | passed                                                                         |
-| Upgrade preservation                         | Installed versionCode 2/versionName 1.1 over versionCode 1; profile and worksheet remained after relaunch.                                                                     | passed                                                                         |
-| Navigation boundary                          | Bundled config contains no `server.url` or `allowNavigation`; all observed WebView loads were local `https://localhost` assets.                                                | passed for selected configuration; P06 must add a regression check             |
-| Secret scan                                  | Built web/native assets contained no `OPENAI_API_KEY`, `sk-proj-`, or key-shaped `sk-` value. APK requested only `INTERNET` plus its non-exported dynamic-receiver permission. | passed                                                                         |
+| Acceptance check                             | Observed evidence                                                                                                                                                                                                                                                                                                                                          | Status                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Bundled production UI starts without network | Wi-Fi and mobile data were disabled; bundled UI launched and displayed the saved profile and worksheet.                                                                                                                                                                                                                                                    | passed                                                             |
+| Create profile                               | Created `P05Reader` with Grade 5, independent level `Advanced`, Lexile `900L`, grade-level difficulty, and medium response length.                                                                                                                                                                                                                         | passed                                                             |
+| Mock generation                              | Generated four structured deterministic prompts with no API URL or API key, then saved the worksheet.                                                                                                                                                                                                                                                      | passed                                                             |
+| Hosted prompt API                            | Deployed P02 mock mode at `https://read-and-reflect.hiteshpatwari.workers.dev`; exact `https://localhost` preflight returned 204 and the installed WebView received four valid prompts over HTTPS with no packaged secret. DevTools then made the endpoint unreachable and the same configured build returned four labeled deterministic fallback prompts. | passed                                                             |
+| Save/reopen                                  | The repaired installed APK flushed and directly read 4,450 bytes from Preferences, then removed only the legacy WebView state. After force-stop/relaunch, Preferences restored `P05Reader`, one saved session, and the `Prince Caspian` UI.                                                                                                                | passed                                                             |
+| Native PDF share                             | Android chooser received `the-chronicles-of-narnia-prince-caspian-reflection.pdf`; the Print target opened it as a two-page Letter document.                                                                                                                                                                                                               | passed                                                             |
+| Offline fallback                             | With Wi-Fi and mobile data disabled, generation reached Prompt Review and displayed `Offline mode used reliable general prompts.`                                                                                                                                                                                                                          | passed                                                             |
+| Upgrade preservation                         | Installed versionCode 2/versionName 1.1 over versionCode 1; profile and worksheet remained after relaunch.                                                                                                                                                                                                                                                 | passed                                                             |
+| Navigation boundary                          | Bundled config contains no `server.url` or `allowNavigation`; all observed WebView loads were local `https://localhost` assets.                                                                                                                                                                                                                            | passed for selected configuration; P06 must add a regression check |
+| Secret scan                                  | Built web/native assets contained no `OPENAI_API_KEY`, `sk-proj-`, or key-shaped `sk-` value. APK requested only `INTERNET` plus its non-exported dynamic-receiver permission.                                                                                                                                                                             | passed                                                             |
 
 The share adapter deleted the temporary PDF: the application cache contained
 only WebView and crash-report directories after returning from the share target.
 No storage permission appeared in the APK manifest.
 
-The proof started with fresh native data, so it did not exercise a one-time
-legacy WebView-to-Preferences migration or migration failure recovery. That is
-an explicit P08 gate, not evidence supplied by the upgrade-preservation result.
+The first device run started with fresh native data, so it did not exercise a
+one-time legacy WebView-to-Preferences migration. The repaired disposable
+harness now copies legacy state once, reads it back before recording migration,
+uses an in-memory synchronous facade over Preferences for the existing
+repository contract, and serializes each full-document Preferences replacement.
+Its proof hook can await pending writes, read the Preferences key directly, and
+remove only the original WebView `localStorage` value before relaunch. Unit tests
+cover migration, direct native readback, restore with empty WebView storage, and
+write-failure observability. Android execution of the repaired restore path
+passed; production migration failure recovery remains an explicit P08 gate.
 
-The disposable Vite build passed with 334 modules, `cap sync android` detected
-only Preferences, Filesystem, and Share, and `:app:packageDebug` completed
-successfully with 129 tasks. A full `assembleDebug` emitted the same installable
-APK but lingered in Capacitor Android's `extractDebugAnnotations` library task;
-P06 must run the canonical full build with the supported API 36 SDK installed.
+The hosted-fetch adapter now applies an eight-second timeout and validates both
+HTTP status and the structured prompt schema. Request rejection, non-2xx status,
+invalid JSON, invalid schema, and timeout all return the labeled deterministic
+fallback. These branches passed focused tests and the configured Android WebView
+proved both the hosted-success and unreachable-endpoint paths.
+
+The repaired disposable harness has 10 passing focused tests and a clean
+TypeScript check. Its Vite build passed with 336 modules; `cap sync android`
+detected only Preferences, Filesystem, and Share, and `:app:packageDebug`
+completed successfully with 129 tasks for the repaired bundle. The repaired APK
+was installed and exercised on `emulator-5554`. A full
+`assembleDebug` emitted the earlier installable APK but lingered in Capacitor
+Android's `extractDebugAnnotations` library task; P06 must run the canonical
+full build with the supported API 36 SDK installed.
 
 ## iOS follow-up matrix
 
@@ -136,8 +152,8 @@ P11 must run these checks on macOS with Xcode 26 or newer:
 
 ## Gate to P06-P08
 
-The architecture is selected and every device-local acceptance row passed. P06,
-P07, and P08 may use this decision for implementation, but P05 must remain
-`running` until the hosted HTTPS prompt endpoint and native-origin CORS row is
-observed. P06 owns shell/build files, P07 owns PDF export/share modules, and P08
-owns persistence/migration modules to avoid overlapping implementation.
+The architecture and Android proof are verified. P06 owns shell/build files,
+P07 owns PDF export/share modules, and P08 owns persistence/migration modules to
+avoid overlapping implementation. Native origins remain mock-only until P10/P11
+add and verify platform attestation; the server rejects native-origin OpenAI
+traffic without that boundary.

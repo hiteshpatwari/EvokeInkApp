@@ -2,71 +2,58 @@
 
 ## Objective
 
-Complete P05 by proving the selected Capacitor architecture on Android and close its remaining hosted API/CORS dependency through P02.
+Complete P05 by proving the selected Capacitor architecture on Android and close its hosted API/CORS dependency through a safe P02 mock deployment.
 
 ## Current status
 
-P05 is running on branch `codex/p05-mobile-architecture` from `main` at `6ae436d`. The bundled Capacitor 8 architecture is recorded. Every device-local Android acceptance row passed on `emulator-5554`: bundled startup, non-demo profile creation, deterministic mock generation, save/reopen, native PDF sharing, explicit offline fallback, versioned upgrade preservation, selected navigation configuration, temporary-file cleanup, permissions review, and secret-pattern scan.
+P05 is verified on branch `codex/p05-mobile-architecture`. The bundled Capacitor 8 architecture passed the local-first workflow, authoritative Preferences restore, native PDF share, hosted HTTPS mock generation, deterministic unreachable-endpoint fallback, upgrade preservation, navigation, permissions, and secret-scan checks on `emulator-5554`.
 
-P05 remains open only because there is no permanent P02 HTTPS endpoint on this branch against which to prove the explicit native API URL and exact Capacitor-origin CORS behavior. This does not block P06-P08 implementation because the architecture gate is recorded and the issue register assigns non-overlapping ownership.
+P02 remains running on branch `codex/p02-cloudflare-production`. A key-free deterministic mock Worker is live at `https://read-and-reflect.hiteshpatwari.workers.dev` with exact Android-origin CORS and a SQLite Durable Object. This is sufficient for P05 proof, but it is not approval to enable native OpenAI traffic or a declaration that P02 production launch is complete.
 
 ## Completed work
 
-- Created `docs/adr/0001-capacitor-mobile-runtime.md` with the architecture, plugin set, security boundaries, consequences, and rejected alternatives.
-- Created `.codex/production/P05_MOBILE_ARCHITECTURE_SPIKE.md` with the compatibility report, implementation contracts, observed Android evidence, and macOS/iOS follow-up matrix.
-- Updated `.codex/production/ISSUE_REGISTER.md`: P05 remains `running`; P06-P08 are ready to implement the recorded architecture.
-- Installed Microsoft OpenJDK 21.0.12.1 after owner UAC approval. Android Studio's bundled Java 25 was incompatible with Gradle 8.14.3.
-- Built a disposable Vite client under ignored `tmp/p05-mobile-spike/` that reuses the production `AppShell`, provides deterministic offline prompts, mirrors canonical state through Preferences, and adapts actual jsPDF bytes to Filesystem and Share.
-- Generated and synchronized Capacitor 8.5.3 Android with only Preferences 8.0.1, Filesystem 8.1.5, and Share 8.0.3.
-- Built and installed the disposable APK on the Pixel 10 Pro XL emulator.
-- Created profile `P05Reader` with Grade 5, independent reading level `Advanced`, Lexile `900L`, grade-level difficulty, and medium response length.
-- Generated and saved four structured mock prompts without an API key.
-- Force-stopped/relaunched and observed the profile and worksheet still present.
-- Shared the actual Prince Caspian PDF to Android's chooser. The Print target loaded it as a two-page Letter document; the sanitized filename was visible.
-- Disabled Wi-Fi and mobile data, relaunched, and generated the labeled deterministic offline fallback successfully.
-- Installed versionCode 2/versionName 1.1 over versionCode 1 and observed profile and worksheet preservation.
-- Confirmed the application cache contained no PDF after sharing and the APK declared no broad storage permission.
-- Ran a second bounded read-only Gemma4:26b document review after the first broad routed run was stopped. It identified hosted-endpoint failover and one-time storage migration as missing explicit gates; both are now recorded.
+- Recorded the Capacitor architecture in `docs/adr/0001-capacitor-mobile-runtime.md` and the proof in `.codex/production/P05_MOBILE_ARCHITECTURE_SPIKE.md`.
+- Used a bounded read-only Gemma4:26b pass plus independent Android, hosted-API, and security reviewers. They found two proof gaps: the original persistence mirror was not authoritative, and P02 lacked CORS preflight/native-attestation boundaries.
+- Repaired the ignored proof harness under `tmp/p05-mobile-spike/`: Preferences is authoritative before React starts; writes are serialized and directly observable; one-time WebView migration is read back before marking complete; hosted fetch has an eight-second timeout and validates HTTP status, JSON, and prompt schema; rejection, non-2xx, invalid JSON/schema, and timeout use labeled deterministic fallback.
+- P02 commits `6bd0a3a` and `c15dbcd` add exact-origin OPTIONS/POST CORS, mock-only native origins, and key-free mock deploy configuration. Native-origin OpenAI mode fails closed until verified platform attestation exists.
+- Authenticated the Cloudflare CLI through the owner's browser approval and deployed P02 in mock mode with `APP_ALLOWED_ORIGINS=https://localhost`.
+- Proved live endpoint behavior: health 200/no-store; allowed preflight 204 with exact ACAO, POST/OPTIONS, and limited headers; allowed POST 200 with four prompts/three required/generic grounding; attacker origin 403 with no ACAO.
+- Rebuilt, synchronized, packaged, and installed the repaired Android APK with the live endpoint configured.
+- From the installed WebView, received four hosted prompts with `fallback=false`, then emulated an unreachable network and received four deterministic prompts with `fallback=true` and the offline notice.
+- Flushed and directly read 4,450 bytes of canonical state from Preferences, removed only legacy WebView state, force-stopped/relaunched, and observed `P05Reader`, one saved session, and `Prince Caspian` restored from native state.
 
-## Files currently changed
+## Files or areas changed
 
-- `.codex/production/ISSUE_REGISTER.md`
-- `.codex/production/P05_MOBILE_ARCHITECTURE_SPIKE.md`
-- `docs/adr/0001-capacitor-mobile-runtime.md`
-
-All proof code, generated native projects, APKs, screenshots, UI XML, and package installations are ignored under `tmp/p05-mobile-spike/` and are not production implementation.
+- Primary P05 branch: `.codex/production/P05_MOBILE_ARCHITECTURE_SPIKE.md`, `.codex/production/ISSUE_REGISTER.md`, and this workstate.
+- Ignored proof artifacts: `tmp/p05-mobile-spike/**`.
+- P02 branch/worktree: committed CORS/security/config fixes at `6bd0a3a` and `c15dbcd`; worktree is clean.
 
 ## Decisions
 
 - Bundle a client-only Vite/React UI in Capacitor; never use production `server.url`.
-- Native prompts use an explicit HTTPS API URL. No provider secret is packaged. Network failure falls back to deterministic general prompts.
-- Browser persistence remains `localStorage`; production native persistence uses an atomic Preferences adapter for the existing canonical versioned JSON plus verified one-time migration.
-- Native PDFs use jsPDF bytes, application cache, and Share, followed by cleanup. No broad filesystem permission or direct printer plugin.
-- Official Capacitor packages only: core, Android, iOS, Preferences, Filesystem, and Share.
-- iOS compilation, signing, privacy manifests, and runtime evidence require macOS/Xcode and remain P11 gates.
+- Native prompts use an explicit HTTPS API URL and package no provider secret.
+- Android origin is exactly `https://localhost`. The iOS origin remains a P11 runtime check and is not deployed in the allowlist yet.
+- Native origins are mock-only until Play Integrity/App Attest or equivalent server-verified attestation is implemented. Exact origin is a CORS boundary, not app identity.
+- Browser state remains `localStorage`; production native state uses an atomic Preferences adapter for the canonical versioned JSON plus verified one-time migration.
+- Native PDFs use jsPDF bytes, cache storage, Share, and cleanup with no broad storage permission.
 
 ## Validation run
 
-- Targeted Prettier write/check passed for all tracked P05 documents.
-- Disposable Vite build passed with 334 modules.
-- `cap sync android` passed and detected exactly three selected plugins.
-- `:app:packageDebug --no-daemon --max-workers=4` passed: 129 tasks; the APK was about 4.7 MB.
-- A full `assembleDebug` produced the installable APK but lingered in Capacitor Android's `extractDebugAnnotations` library task. P06 must run the canonical full build with the supported API 36 SDK installed.
-- Because platform 36/build-tools 35 downloads stalled, the disposable proof compiled against installed platform 37/build-tools 36 while retaining targetSdk 36. This is proof-only; P06 must pin Capacitor's supported API 36 combination.
-- APK installation and versioned upgrade both returned `Success`.
-- Android chooser showed the generated PDF; Print reported `Letter` and `1/2` pages.
-- Offline UI and prompt generation passed with both Wi-Fi and mobile data disabled; networking was restored afterward.
-- Built web/native assets contained no `OPENAI_API_KEY`, `sk-proj-`, or key-shaped `sk-` value.
-- APK permissions were `INTERNET` and the app's non-exported dynamic-receiver permission only.
+- P02: 91/91 tests, lint, format, typecheck, Next build, vinext build, and mock dry-run passed in the implementing agent. Primary-session live build/deploy passed; a pre-build standalone typecheck encountered stale `.next` route types, while the agent's fresh `next typegen` + typecheck passed.
+- P05 harness: 10/10 tests, TypeScript, Vite build (336 modules), Capacitor sync (three plugins), and Gradle `:app:packageDebug` (129 tasks) passed.
+- APK install returned `Success`; live hosted WebView request and unreachable-network fallback both passed.
+- Authoritative Preferences restore passed after removing only WebView state.
+- Earlier PDF, upgrade, permissions, cache cleanup, and secret-scan evidence remains valid.
 
 ## Open issues and blockers
 
-- Hosted prompt API/CORS proof awaits the P02 HTTPS endpoint and exact native-origin configuration.
-- P06 must replace proof-only tooling overrides, add a navigation regression check, and complete canonical `assembleDebug` on supported API 36 tools.
-- P07 must implement the native PDF adapter in production code and preserve browser download/print tests.
-- P08 must replace the polling proof mirror with atomic asynchronous Preferences persistence and migration.
-- iOS runtime evidence remains impossible on this Windows host.
+- P02 public production launch still requires Workers Paid activation, production web origins, provider secrets, custom-domain/operational decisions, and real-AI acceptance. The current account subscription observed by CLI did not prove Workers Paid activation.
+- Native OpenAI traffic is intentionally blocked until platform attestation is implemented and verified.
+- P06 must productionize the shell using the supported API 36 toolchain and add navigation regression coverage.
+- P07 must productionize PDF sharing while preserving browser download/print tests.
+- P08 must productionize atomic Preferences persistence and migration recovery.
+- iOS build, signing, privacy manifests, origin validation, and runtime evidence require macOS/Xcode and remain P11 gates.
 
 ## Immediate next action
 
-Review the bounded Gemma result, commit the tracked P05 decision/evidence artifacts, then begin P06-P08 from the recorded ownership boundaries. Close P05's final hosted API/CORS row as soon as P02 exposes the permanent HTTPS endpoint.
+Commit the final P05 evidence/state changes and push the P02 security/deployment commits. Then start P06-P08 from their recorded ownership boundaries; do not enable native OpenAI until attestation exists.
