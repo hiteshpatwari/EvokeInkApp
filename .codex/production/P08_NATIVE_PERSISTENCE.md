@@ -1,6 +1,6 @@
 # P08 authoritative native persistence
 
-Status: implementation and Android acceptance complete; independent re-review pending.
+Status: verified on Android on 2026-10-21; independent re-review approved.
 
 ## Implemented contract
 

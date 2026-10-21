@@ -7,12 +7,13 @@ authoritative native persistence are now implemented and verified on Android.
 
 ## Current status
 
-P08 implementation and Android acceptance are complete on branch
-`codex/p08-native-persistence`; independent repair re-review is pending. The
-Android client awaits an official Capacitor Preferences adapter before React
-renders, migrates only valid canonical WebView state once, treats native state
-as authoritative, and verifies queued writes/removals before the UI reports
-success. Browser storage and the verified P06/P07 paths remain intact.
+P08 is verified on branch `codex/p08-native-persistence`; independent re-review
+approved the transactional rollback, queue recovery, migration-marker, UI-copy,
+automated, build, and Android acceptance evidence. The Android client awaits an
+official Capacitor Preferences adapter before React renders, migrates only valid
+canonical WebView state once, treats native state as authoritative, and verifies
+queued writes/removals before the UI reports success. Browser storage and the
+verified P06/P07 paths remain intact.
 
 ## Completed work
 
@@ -81,5 +82,5 @@ success. Browser storage and the verified P06/P07 paths remain intact.
 
 ## Immediate next action
 
-Independently review P08, then continue P09-P12 in dependency order without
-weakening attestation or owner-action gates.
+Continue P09-P12 in dependency order without weakening attestation or
+owner-action gates.
