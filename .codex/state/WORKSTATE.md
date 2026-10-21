@@ -9,10 +9,12 @@ proof.
 
 ## Current status
 
-P02 implementation is complete on branch `codex/p02-cloudflare-production` but
-not committed or deployed. The remaining gates are external/human: confirm the
-Cloudflare Workers Paid subscription, choose the exact production HTTPS origin,
-set production secrets, deploy, run live probes, and demonstrate rollback.
+P02 implementation is committed on branch `codex/p02-cloudflare-production` at
+`0f3f190` but not deployed. A read-only dashboard check confirmed the account is
+currently on Workers Free and shows a Paid upgrade at $5/month plus usage. The
+remaining gates are external/human: approve/complete that paid subscription,
+choose the exact production HTTPS origin, set production secrets, deploy, run
+live probes, and demonstrate rollback.
 
 The production Worker is named `read-and-reflect`. It uses vinext 1.3.0 and
 `@vinext/cloudflare` 1.2.0 with a custom Worker entrypoint. Two bindings are
@@ -98,8 +100,8 @@ every vinext upgrade. Any new runtime/client advisory remains release-blocking.
 
 ## Immediate next action
 
-Owner confirms whether the Cloudflare account is already on Workers Paid. If
-not, owner activates it. Then set the exact production HTTPS origin and beta
-limits, enter both Worker secrets interactively, build/deploy in mock mode, run
-the documented live health/security/prompt/concurrency probes, deploy a second
-version, and demonstrate rollback before P02 can become `verified`.
+Owner approves and completes the displayed Workers Paid upgrade ($5/month plus
+usage). Then set the exact production HTTPS origin and beta limits, enter both
+Worker secrets interactively, build/deploy in mock mode, run the documented live
+health/security/prompt/concurrency probes, deploy a second version, and
+demonstrate rollback before P02 can become `verified`.
