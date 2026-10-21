@@ -44,6 +44,7 @@ P02 remains running on branch `codex/p02-cloudflare-production`. A key-free dete
 - APK install returned `Success`; live hosted WebView request and unreachable-network fallback both passed.
 - Authoritative Preferences restore passed after removing only WebView state.
 - Earlier PDF, upgrade, permissions, cache cleanup, and secret-scan evidence remains valid.
+- Independent Android and security re-reviews reported no remaining must-fix issues; the focused CORS/security suite passed 16/16.
 
 ## Open issues and blockers
 
@@ -56,4 +57,4 @@ P02 remains running on branch `codex/p02-cloudflare-production`. A key-free dete
 
 ## Immediate next action
 
-Commit the final P05 evidence/state changes and push the P02 security/deployment commits. Then start P06-P08 from their recorded ownership boundaries; do not enable native OpenAI until attestation exists.
+Start P06-P08 from their recorded ownership boundaries; do not enable native OpenAI until attestation exists.
