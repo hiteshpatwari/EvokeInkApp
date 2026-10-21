@@ -23,7 +23,7 @@ Status: verified on Android on 2026-10-21.
 
 - RED: the native export tests initially failed because
   `mobile/src/nativeWorksheetExport.ts` did not exist.
-- Root Vitest: 28 files, 140 tests passed. This includes browser-export
+- Root Vitest: 28 files, 142 tests passed. This includes browser-export
   regression and native AppShell copy/state coverage.
 - Mobile Vitest: 6 files, 30 tests passed. Native export coverage verifies
   bytes/base64, filename sanitization, share success, cancellation, failure,
@@ -43,6 +43,16 @@ The production APK installed successfully on `emulator-5554`. A saved Prince
 Caspian worksheet opened from the installed bundled UI. Its preview exposed
 `Share PDF`, did not expose the browser-only `Print` control, and opened
 Android's `ChooserActivity` with a content URI.
+
+An independent verification pass found that screen-transition focus could
+restore the previous 202 CSS-pixel scroll offset, placing preview controls below
+the sticky header visually but underneath its hit-test region. Screen focus now
+uses `preventScroll` and then resets the document scroll root. In portrait at
+font scale 1.0, the header ended at CSS y=202 and Share PDF began at y=299. A
+normal ADB tap at the visible button center opened the chooser rather than Home.
+In landscape at font scale 2.0, the header ended at y=214.67 and Share PDF began
+at y=312.05, with no rectangle overlap. Automated coverage locks the
+focus-without-scroll and scroll-reset behavior.
 
 While the chooser was open,
 `cache/the-chronicles-of-narnia-prince-caspian-reflection.pdf` existed in the

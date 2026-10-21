@@ -151,8 +151,10 @@ export function AppShell() {
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
-      document.querySelector<HTMLElement>("main")?.focus();
+      document.querySelector<HTMLElement>("main")?.focus({
+        preventScroll: true,
+      });
+      (document.scrollingElement ?? document.documentElement).scrollTop = 0;
     });
     return () => cancelAnimationFrame(frame);
   }, [screen]);

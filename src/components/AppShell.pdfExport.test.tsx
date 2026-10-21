@@ -83,6 +83,21 @@ describe("worksheet PDF export UI", () => {
     );
   });
 
+  it("resets screen scroll without focusing preview actions under the sticky native header", async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    document.documentElement.scrollTop = 202;
+    restoreExporter = installWorksheetExporter({
+      experience: { primaryLabel: "Share PDF", printAvailable: false },
+      export: vi.fn(async () => ({ status: "shared" as const })),
+    });
+
+    await openPreview();
+
+    await waitFor(() => expect(document.documentElement.scrollTop).toBe(0));
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    focus.mockRestore();
+  });
+
   it("surfaces unavailable sharing without claiming success", async () => {
     restoreExporter = installWorksheetExporter({
       experience: { primaryLabel: "Share PDF", printAvailable: false },

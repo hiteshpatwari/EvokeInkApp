@@ -47,7 +47,7 @@ cleanup for success, cancellation, and failure.
 ## Validation evidence
 
 - TDD RED failed because the native export module did not exist; GREEN passes.
-- Root Vitest: 28 files / 140 tests passed.
+- Root Vitest: 28 files / 142 tests passed.
 - Mobile Vitest: 6 files / 30 tests passed.
 - Root/mobile TypeScript, lint, formatting, Next build, mobile Vite production
   build, Capacitor sync, and artifact secret scan passed.
@@ -57,6 +57,11 @@ cleanup for success, cancellation, and failure.
 - Android ChooserActivity opened with a content URI. The sanitized PDF existed
   in private cache while the chooser was open; Android Back cancelled sharing,
   the app reported cancellation, and the temporary PDF was removed.
+- A verifier-found sticky-header hit-target overlap was repaired by focusing new
+  screens with `preventScroll` and then resetting the document scroll root. A
+  normal portrait/font-1.0 tap opened Share instead of Home; portrait bounds had
+  a 97 CSS-pixel header-to-button gap. Landscape/font-2.0 bounds also had no
+  overlap, and focused regression coverage passes.
 - APK permissions contain INTERNET and the application-scoped dynamic-receiver
   permission only; no broad storage permission was added.
 - `pnpm audit --audit-level=moderate` continues to report only the documented
