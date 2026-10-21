@@ -2,106 +2,59 @@
 
 ## Objective
 
-Complete P02 for the selected Cloudflare Workers Paid runtime: production
-configuration, atomic public-AI controls, environment/secret contract, health
-check, dependency disposition, deployment procedure, live probes, and rollback
-proof.
+Complete P05 by proving the selected Capacitor architecture on Android and close its hosted API/CORS dependency through a safe P02 mock deployment.
 
 ## Current status
 
-P02 implementation is committed on branch `codex/p02-cloudflare-production` at
-`0f3f190` but not deployed. A read-only dashboard check confirmed the account is
-currently on Workers Free and shows a Paid upgrade at $5/month plus usage. The
-remaining gates are external/human: approve/complete that paid subscription,
-choose the exact production HTTPS origin, set production secrets, deploy, run
-live probes, and demonstrate rollback.
+P05 is verified on branch `codex/p05-mobile-architecture`. The bundled Capacitor 8 architecture passed the local-first workflow, authoritative Preferences restore, native PDF share, hosted HTTPS mock generation, deterministic unreachable-endpoint fallback, upgrade preservation, navigation, permissions, and secret-scan checks on `emulator-5554`.
 
-The production Worker is named `read-and-reflect`. It uses vinext 1.3.0 and
-`@vinext/cloudflare` 1.2.0 with a custom Worker entrypoint. Two bindings are
-declared as Cloudflare secrets (`OPENAI_API_KEY`, `AI_QUOTA_HASH_SECRET`); all
-non-secret runtime controls are explicit text bindings with safe mock defaults.
-`PROMPT_CONTROL_STORE=cloudflare` selects the host adapter.
+P02 remains running on branch `codex/p02-cloudflare-production`. A key-free deterministic mock Worker is live at `https://read-and-reflect.hiteshpatwari.workers.dev` with exact Android-origin CORS and a SQLite Durable Object. This is sufficient for P05 proof, but it is not approval to enable native OpenAI traffic or a declaration that P02 production launch is complete.
 
 ## Completed work
 
-- Added a SQLite-backed `PromptControlDurableObject` and a platform-neutral
-  core that performs installation, IP, and estimated-budget reservation inside
-  one storage transaction.
-- Added `CloudflarePromptControlStore`, lazily selected by the prompt route so
-  Node/local mock operation remains independent of Cloudflare modules.
-- Made `AI_QUOTA_HASH_SECRET` mandatory for OpenAI mode. Mock mode is key-free
-  and deterministic and no longer generates a random fallback secret during
-  route-module initialization.
-- Added `/api/health`, returning only `{ "status": "ok" }` with
-  `Cache-Control: no-store`.
-- Added Cloudflare config for the custom entrypoint, secret/text bindings,
-  Durable Object binding/export, SQLite storage, assets, and current limits.
-- Upgraded Vite 8.3.0 to 8.3.3, vinext 1.2.1 to 1.3.0, and
-  `@vinext/cloudflare` 1.1.1 to 1.2.0.
-- Overrode vulnerable transitive `fflate` 0.7.3 with compatible 0.7.5.
-- Added `tmp/` to TypeScript exclusions so ignored validation clones do not
-  pollute application typechecking.
-- Added `.codex/production/P02_CLOUDFLARE_DEPLOYMENT.md` with the environment
-  contract, interactive secret commands, build/release gates, smoke probes,
-  mock failover, version rollback, and stop conditions.
-- Updated the production issue register: P02 is `running` until live external
-  gates pass.
+- Recorded the Capacitor architecture in `docs/adr/0001-capacitor-mobile-runtime.md` and the proof in `.codex/production/P05_MOBILE_ARCHITECTURE_SPIKE.md`.
+- Used a bounded read-only Gemma4:26b pass plus independent Android, hosted-API, and security reviewers. They found two proof gaps: the original persistence mirror was not authoritative, and P02 lacked CORS preflight/native-attestation boundaries.
+- Repaired the ignored proof harness under `tmp/p05-mobile-spike/`: Preferences is authoritative before React starts; writes are serialized and directly observable; one-time WebView migration is read back before marking complete; hosted fetch has an eight-second timeout and validates HTTP status, JSON, and prompt schema; rejection, non-2xx, invalid JSON/schema, and timeout use labeled deterministic fallback.
+- P02 commits `6bd0a3a` and `c15dbcd` add exact-origin OPTIONS/POST CORS, mock-only native origins, and key-free mock deploy configuration. Native-origin OpenAI mode fails closed until verified platform attestation exists.
+- Authenticated the Cloudflare CLI through the owner's browser approval and deployed P02 in mock mode with `APP_ALLOWED_ORIGINS=https://localhost`.
+- Proved live endpoint behavior: health 200/no-store; allowed preflight 204 with exact ACAO, POST/OPTIONS, and limited headers; allowed POST 200 with four prompts/three required/generic grounding; attacker origin 403 with no ACAO.
+- Rebuilt, synchronized, packaged, and installed the repaired Android APK with the live endpoint configured.
+- From the installed WebView, received four hosted prompts with `fallback=false`, then emulated an unreachable network and received four deterministic prompts with `fallback=true` and the offline notice.
+- Flushed and directly read 4,450 bytes of canonical state from Preferences, removed only legacy WebView state, force-stopped/relaunched, and observed `P05Reader`, one saved session, and `Prince Caspian` restored from native state.
 
-## Validation evidence
+## Files or areas changed
 
-- Focused health/config/Durable Object/route tests: 18/18 passed during TDD.
-- Local Cloudflare workerd test used OpenAI mode with a deliberately open
-  estimated-budget circuit, so no provider call or API key was needed. Twenty
-  concurrent requests against an installation limit of 2 produced exactly two
-  `200` deterministic mock fallbacks and eighteen `429` quota rejections. This
-  proves the actual RPC binding, Durable Object subclass, SQLite-backed runtime,
-  and atomic reservation boundary work together.
-- `pnpm format:check`: passed.
-- `pnpm lint`: passed with warnings denied.
-- `pnpm build`: passed; Next routes include `/`, `/api/health`, and
-  `/api/prompts`.
-- `pnpm typecheck`: passed after the canonical Next build refreshed generated
-  route types.
-- `pnpm test`: 18 files and 87/87 tests passed.
-- `pnpm build:vinext`: passed; generated Cloudflare output includes the Durable
-  Object binding/export and both secret declarations.
-- `pnpm exec cf deploy --dry-run --prebuilt`: passed; 23 asset files and about
-  2,382.76 KiB uncompressed / 677.49 KiB gzip were accepted.
-- Generated Worker and client JavaScript contain none of `fflate`, `braces`,
-  `micromatch`, `fast-glob`, or `vite-plugin-dynamic-import`. The temporary
-  local integration-only quota secret was also absent.
-- No non-empty local OpenAI or quota-hash secret existed to scan in generated
-  output.
-- `git diff --check`: passed.
+- Primary P05 branch: `.codex/production/P05_MOBILE_ARCHITECTURE_SPIKE.md`, `.codex/production/ISSUE_REGISTER.md`, and this workstate.
+- Ignored proof artifacts: `tmp/p05-mobile-spike/**`.
+- P02 branch/worktree: committed CORS/security/config fixes at `6bd0a3a` and `c15dbcd`; worktree is clean.
 
-## Dependency disposition
+## Decisions
 
-`pnpm audit --audit-level=moderate` reports one high advisory for
-`braces@3.0.3` through vinext's build-only
-`vite-plugin-commonjs -> vite-plugin-dynamic-import -> fast-glob -> micromatch`
-chain. The registry reports no patched version. The package is absent from all
-generated Worker/browser JavaScript and the build receives repository-owned
-patterns only. This is a documented, narrow build-tool exception; recheck on
-every vinext upgrade. Any new runtime/client advisory remains release-blocking.
+- Bundle a client-only Vite/React UI in Capacitor; never use production `server.url`.
+- Native prompts use an explicit HTTPS API URL and package no provider secret.
+- Android origin is exactly `https://localhost`. The iOS origin remains a P11 runtime check and is not deployed in the allowlist yet.
+- Native origins are mock-only until Play Integrity/App Attest or equivalent server-verified attestation is implemented. Exact origin is a CORS boundary, not app identity.
+- Browser state remains `localStorage`; production native state uses an atomic Preferences adapter for the canonical versioned JSON plus verified one-time migration.
+- Native PDFs use jsPDF bytes, cache storage, Share, and cleanup with no broad storage permission.
 
-## Decisions and constraints
+## Validation run
 
-- Cloudflare Workers Free remains rejected because authenticated P01 probes
-  measured 121 ms CPU for the first home request and 24 ms for a mock prompt,
-  above the Free 10 ms gate. Workers Paid is required before production traffic.
-- Default deployment mode remains `AI_PROVIDER=mock`. Real AI requires the
-  stable quota-hash secret, exact HTTPS origin, conservative beta limits,
-  provider budget controls, and owner-approved privacy/retention posture.
-- Child names/local IDs stay out of network requests. Operational logs contain
-  category/outcome/provider/timing only.
-- Billing activation, payment, production secrets, DNS/origin selection, and
-  production deployment remain owner checkpoints. No paid service was activated
-  and no Worker was deployed in this turn.
+- P02: 91/91 tests, lint, format, typecheck, Next build, vinext build, and mock dry-run passed in the implementing agent. Primary-session live build/deploy passed; a pre-build standalone typecheck encountered stale `.next` route types, while the agent's fresh `next typegen` + typecheck passed.
+- P05 harness: 10/10 tests, TypeScript, Vite build (336 modules), Capacitor sync (three plugins), and Gradle `:app:packageDebug` (129 tasks) passed.
+- APK install returned `Success`; live hosted WebView request and unreachable-network fallback both passed.
+- Authoritative Preferences restore passed after removing only WebView state.
+- Earlier PDF, upgrade, permissions, cache cleanup, and secret-scan evidence remains valid.
+- Independent Android and security re-reviews reported no remaining must-fix issues; the focused CORS/security suite passed 16/16.
+
+## Open issues and blockers
+
+- P02 public production launch still requires Workers Paid activation, production web origins, provider secrets, custom-domain/operational decisions, and real-AI acceptance. The current account subscription observed by CLI did not prove Workers Paid activation.
+- Native OpenAI traffic is intentionally blocked until platform attestation is implemented and verified.
+- P06 must productionize the shell using the supported API 36 toolchain and add navigation regression coverage.
+- P07 must productionize PDF sharing while preserving browser download/print tests.
+- P08 must productionize atomic Preferences persistence and migration recovery.
+- iOS build, signing, privacy manifests, origin validation, and runtime evidence require macOS/Xcode and remain P11 gates.
 
 ## Immediate next action
 
-Owner approves and completes the displayed Workers Paid upgrade ($5/month plus
-usage). Then set the exact production HTTPS origin and beta limits, enter both
-Worker secrets interactively, build/deploy in mock mode, run the documented live
-health/security/prompt/concurrency probes, deploy a second version, and
-demonstrate rollback before P02 can become `verified`.
+Start P06-P08 from their recorded ownership boundaries; do not enable native OpenAI until attestation exists.
