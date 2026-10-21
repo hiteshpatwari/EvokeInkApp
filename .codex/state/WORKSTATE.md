@@ -40,8 +40,11 @@ claimed by this shell.
 - Added navigation/config, transport, fallback, timeout, and production URL
   tests. The RED phase failed on the absent transport/config modules before the
   implementation was added.
-- Added a secret scanner for Vite output, synchronized Android assets, and the
-  debug APK. It rejects provider environment names and OpenAI key patterns.
+- Added a fail-closed secret scanner for Vite output, synchronized Android
+  assets, and every extracted debug APK entry. Missing production artifacts or
+  unsafe archive paths fail the scan; extraction uses an owned unique temporary
+  directory with cleanup validation. It rejects provider environment names and
+  OpenAI key patterns.
 - Replaced Capacitor CLI's vulnerable transitive `uuid@7.0.3` with 11.1.1;
   Capacitor sync still passes. The previously accepted vinext-only `braces`
   advisory remains the only audit finding.
@@ -62,7 +65,7 @@ claimed by this shell.
 - `pnpm format:check`: passed.
 - `pnpm lint`: passed with zero warnings.
 - `pnpm typecheck`: passed for Next and mobile TypeScript projects.
-- `pnpm test`: 20 files, 104 tests passed, including 13 P06 tests.
+- `pnpm test`: 21 files, 107 tests passed, including 16 P06 tests.
 - `pnpm build`: Next 16.4.0 production build passed.
 - Production mobile build without `VITE_PROMPT_API_URL`: failed as required.
 - Production mobile build with the deployed HTTPS mock endpoint: passed; 323
@@ -73,7 +76,9 @@ claimed by this shell.
   licensed Gradle build because API 36 was not previously installed.
 - APK inspection: compile SDK 36, target SDK 36, min SDK 24; only INTERNET and
   Capacitor's non-exported dynamic-receiver permission are declared.
-- Bundle/Android assets/APK provider-secret scan: passed.
+- Required-artifact bundle/Android assets/extracted-APK provider-secret scan:
+  passed. Focused tests prove missing artifacts and secrets inside compressed
+  APK entries fail closed.
 - Emulator `Pixel_10_Pro_XL` (`emulator-5554`): APK install returned `Success`;
   bundled UI launched as `app.readreflect.mobile` and exposed the Read & Reflect
   home flow and child-profile actions in the UI hierarchy.
