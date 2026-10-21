@@ -20,6 +20,10 @@ output/
 android/.gradle/
 android/local.properties
 android/**/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/**/build/
+mobile/dist/
 ios/App/Pods/
 ios/App/build/
 DerivedData/
