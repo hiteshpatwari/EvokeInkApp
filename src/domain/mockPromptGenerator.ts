@@ -224,6 +224,20 @@ function boundedSource(value: string): string {
   return `“${value.slice(0, 180)}${value.length > 180 ? "…" : ""}”`;
 }
 
+function boundedNotes(parentNotes: string, detailNotes: string): string {
+  const sources = [
+    parentNotes ? `parent observation: ${parentNotes}` : "",
+    detailNotes ? `reading detail: ${detailNotes}` : "",
+  ].filter(Boolean);
+  const perSourceLimit = sources.length > 1 ? 105 : 180;
+  return sources
+    .map(
+      (source) =>
+        `“${source.slice(0, perSourceLimit)}${source.length > perSourceLimit ? "…" : ""}”`,
+    )
+    .join(" and ");
+}
+
 function requestedTemplates(input: GenerationInput): PromptTemplate[] {
   const normalized = input.skills.map((skill) =>
     skill === "summary" ? "concise_summary" : skill,
@@ -269,7 +283,7 @@ function contextualText(
     return `Using the parent-provided summary ${summary}, make one claim about why this moment or idea matters. Support your answer with evidence you find in the book.`;
   }
   if (grounding === "parent_notes" && index === 2) {
-    const note = boundedSource(input.parentNotes || input.detailNotes);
+    const note = boundedNotes(input.parentNotes, input.detailNotes);
     if (band === "accessible") {
       return `A parent note says ${note}. Tell what you think it shows, then find one clue in the book that supports your answer.`;
     }

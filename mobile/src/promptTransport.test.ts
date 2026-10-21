@@ -109,6 +109,42 @@ describe("createMobilePromptFetch", () => {
     ).toBe(true);
   });
 
+  it("preserves notes specificity and grounding in an offline fallback", async () => {
+    const notesRequest: NetworkGenerationInput = {
+      ...request,
+      specificity: "notes",
+      parentSummary: "The supplied summary describes a difficult decision.",
+      parentNotes: "The reader wondered why the decision was delayed.",
+      detailNotes: "The supplied detail mentions a locked gate.",
+    };
+    const mobileFetch = createMobilePromptFetch(
+      vi.fn(async () => {
+        throw new Error("offline");
+      }),
+      "https://api.example.com/api/prompts",
+    );
+
+    const body = await (
+      await mobileFetch("/api/prompts", {
+        method: "POST",
+        body: JSON.stringify(notesRequest),
+      })
+    ).json();
+
+    expect(body).toMatchObject({
+      fallback: true,
+      provider: "mock",
+      notice:
+        "Offline mode used your supplied summary and notes on this device.",
+    });
+    expect(
+      body.prompts.map((prompt: { grounding: string }) => prompt.grounding),
+    ).toEqual(["generic", "parent_summary", "parent_notes", "generic"]);
+    expect(body.prompts[1].text).toContain("difficult decision");
+    expect(body.prompts[2].text).toContain("decision was delayed");
+    expect(body.prompts[2].text).toContain("locked gate");
+  });
+
   it("aborts a hosted request at the configured timeout", async () => {
     const realFetch = vi.fn(
       (_input: RequestInfo | URL, hostedInit?: RequestInit) =>

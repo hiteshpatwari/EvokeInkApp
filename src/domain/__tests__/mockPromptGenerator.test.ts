@@ -75,6 +75,38 @@ describe("MockPromptGenerator", () => {
     expect(result.prompts[2]?.text).toContain(parentNotes);
   });
 
+  it("uses detail notes when no general parent note was supplied", async () => {
+    const detailNotes =
+      "A silver key appears twice in the supplied reading notes.";
+    const result = await new MockPromptGenerator().generate({
+      ...baseInput,
+      specificity: "notes",
+      detailNotes,
+    });
+
+    expect(result.prompts[2]).toMatchObject({ grounding: "parent_notes" });
+    expect(result.prompts[2]?.text).toContain(detailNotes);
+  });
+
+  it("combines both note fields within a bounded note-grounded prompt", async () => {
+    const parentNotes = `Reader observation ${"a".repeat(220)}`;
+    const detailNotes = `Reading detail ${"b".repeat(220)}`;
+    const result = await new MockPromptGenerator().generate({
+      ...baseInput,
+      specificity: "notes",
+      parentNotes,
+      detailNotes,
+    });
+    const prompt = result.prompts[2];
+
+    expect(prompt).toMatchObject({ grounding: "parent_notes" });
+    expect(prompt?.text).toContain("Reader observation");
+    expect(prompt?.text).toContain("Reading detail");
+    expect(prompt?.text.length).toBeLessThan(650);
+    expect(prompt?.text).not.toContain("a".repeat(180));
+    expect(prompt?.text).not.toContain("b".repeat(180));
+  });
+
   it("adapts language using grade, reading level, and preferred difficulty", async () => {
     const generator = new MockPromptGenerator();
     const early = await generator.generate({

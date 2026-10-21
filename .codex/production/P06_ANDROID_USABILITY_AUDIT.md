@@ -2,10 +2,10 @@
 
 ## Decision
 
-The two Android UX defects found by this audit are repaired and independently
-code-reviewed. P06 remains `running`, rather than `verified`, while the
-separately identified notes-specific fallback grounding gaps are repaired and
-device-verified. P07 and P08 must not begin before that remaining P06 work.
+The two Android UX defects found by this audit and the notes-specific fallback
+grounding gaps are repaired. Focused and full automated checks, Android
+packaging, and device acceptance pass. P06 is `verified`; P07 may proceed,
+followed by P08.
 
 The original release blockers were:
 
@@ -135,6 +135,30 @@ These are expected missing capabilities, not new P06 regressions:
   P08 requirements for authoritative atomic Preferences state, verified
   migration, or recovery.
 
+## Notes-specific prompt acceptance
+
+The `Use my notes for more specific prompts` path is now verified at its UI,
+privacy, grounding, online, and offline boundaries:
+
+- Notes mode rejects generation until at least one summary or note field is
+  supplied.
+- The outbound request contains grade/age, optional reading level and Lexile,
+  difficulty, response length, book metadata, skills, specificity, summary,
+  parent notes, and detail notes. It excludes the child's name and internal
+  profile/worksheet identifiers.
+- Hosted mock generation returned summary- and note-grounded prompts without
+  introducing unsupported book details. The review UI displayed `Based on
+parent summary` and `Based on parent notes` provenance.
+- When the WebView network was emulated offline, all three supplied context
+  fields remained in the on-device deterministic fallback. The fallback notice
+  explicitly identified offline use of the supplied summary and notes.
+- When both note fields are present, the deterministic generator includes a
+  separately labeled, bounded excerpt of each rather than silently ignoring
+  the detail-note field. Detail-only input is also covered.
+- On `emulator-5554`, the final installed APK preserved the three form values,
+  produced the two expected grounding labels, and included both note sources in
+  the note-grounded prompt while DevTools network emulation was offline.
+
 ## Additional hardening after the two release blockers
 
 - Give Android controls a 48 dp minimum target and adequate separation.
@@ -148,11 +172,10 @@ These are expected missing capabilities, not new P06 regressions:
 
 ## Remaining verification order
 
-1. Repair and test the separately tracked notes-specific fallback grounding
-   gaps.
-2. Repeat device acceptance for those notes scenarios.
-3. Mark P06 verified only after all P06 gates pass together.
-4. Start P07, then P08.
+1. Start P07 native PDF sharing.
+2. Complete P08 atomic native persistence after P07.
+3. Preserve the P06 Back, safe-area, privacy, and notes acceptance matrix in
+   later mobile release candidates.
 
 The emulator was restored after the audit to automatic rotation, font scale
 1.0, and enabled Wi-Fi/mobile data.

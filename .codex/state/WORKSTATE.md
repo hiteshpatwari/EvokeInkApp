@@ -7,11 +7,10 @@ native PDF sharing or P08 native persistence.
 
 ## Current status
 
-The Android Back and system-bar/safe-area defects found by the emulator audit
-are repaired on branch `codex/p06-ux-fixes` and pass focused tests, independent
-code review, and emulator acceptance. P06 remains `running` while the separately
-identified notes-specific fallback grounding gaps are repaired and verified.
-P07 and P08 remain queued behind P06.
+The Android Back and system-bar/safe-area defects and the notes-specific
+fallback grounding gaps are repaired on branch `codex/p06-ux-fixes`. Automated
+checks, independent UX code review, Android packaging, and emulator acceptance
+pass. P06 is verified. P07 is the next package, followed by P08.
 
 ## Completed work
 
@@ -38,6 +37,13 @@ P07 and P08 remain queued behind P06.
 - Updated `fflate` to 0.8.3 and added the root override needed to remove the
   vulnerable transitive copy. The known vinext-only `braces@3.0.3` advisory
   remains accepted because no patched release exists.
+- Preserved notes specificity, parent summary, parent notes, and detail notes
+  in the on-device deterministic fallback instead of degrading it to general
+  prompts.
+- The deterministic generator now handles detail-only notes and includes
+  bounded excerpts of both note fields when both are supplied.
+- Added integration coverage for empty-notes validation, the exact privacy-safe
+  request body, provenance labels, and notes-grounded offline fallback.
 
 ## Files or areas changed
 
@@ -49,7 +55,9 @@ P07 and P08 remain queued behind P06.
   viewport, sticky-header, and large-text behavior.
 - `package.json`, `mobile/package.json`, and `pnpm-lock.yaml` for exact native
   plugin/security dependency state.
-- P06 audit and issue register for current device evidence and remaining gate.
+- `mobile/src/promptTransport.ts`, the deterministic mock generator, and their
+  focused tests for notes-preserving fallback.
+- P06 audit and issue register for the completed device acceptance gate.
 
 ## Validation evidence
 
@@ -67,13 +75,17 @@ P07 and P08 remain queued behind P06.
   content stays outside system controls.
 - Keyboard-open acceptance at font scale 1.0 kept Book title focused and visible;
   Android reported `mInputShown=true` and `mIsInputViewShown=true`.
-- Emulator was restored to font scale 1.0, automatic rotation, and the app was
-  force-stopped after acceptance.
+- Formatting, lint, root/mobile typecheck, 127 tests, Next production build,
+  configured mobile Vite build, Capacitor sync, artifact secret scan, and
+  Gradle `assembleDebug` passed.
+- The installed APK's hosted notes flow displayed parent-summary and
+  parent-notes provenance. With WebView networking emulated offline, the same
+  three note fields produced grounded deterministic prompts and the explicit
+  offline notice; both parentNotes and detailNotes appeared in the bounded
+  note-grounded prompt.
 
 ## Open issues and blockers
 
-- P06 notes-specific fallback grounding gaps remain to be fixed and accepted on
-  device; do not mark P06 verified yet.
 - P07 must implement native PDF cache/share/cleanup while preserving browser
   download and print.
 - P08 must implement authoritative atomic Preferences state and verified
@@ -85,6 +97,5 @@ P07 and P08 remain queued behind P06.
 
 ## Immediate next action
 
-Complete the notes-specific fallback grounding repair, run its focused and
-device acceptance checks, then re-evaluate P06 as one release gate before P07
-and P08 begin.
+Start P07 native PDF cache/share/cleanup while preserving browser download and
+print behavior, then complete P08.

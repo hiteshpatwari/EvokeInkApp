@@ -4,7 +4,9 @@ import {
   promptBatchSchema,
 } from "../../src/domain/schemas";
 
-const FALLBACK_NOTICE = "Offline mode used reliable general prompts.";
+const GENERAL_FALLBACK_NOTICE = "Offline mode used reliable general prompts.";
+const NOTES_FALLBACK_NOTICE =
+  "Offline mode used your supplied summary and notes on this device.";
 
 type FetchImplementation = typeof fetch;
 
@@ -18,17 +20,16 @@ async function deterministicFallback(init?: RequestInit) {
   const networkInput = parseRequestBody(init);
   const result = await new MockPromptGenerator().generate({
     ...networkInput,
-    specificity: "general",
-    parentNotes: "",
-    parentSummary: "",
-    detailNotes: "",
     child: { ...networkInput.child, name: "Reader" },
   });
   return Response.json({
     ...result,
     provider: "mock",
     fallback: true,
-    notice: FALLBACK_NOTICE,
+    notice:
+      networkInput.specificity === "notes"
+        ? NOTES_FALLBACK_NOTICE
+        : GENERAL_FALLBACK_NOTICE,
   });
 }
 
