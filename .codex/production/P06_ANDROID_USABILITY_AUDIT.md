@@ -2,8 +2,12 @@
 
 ## Decision
 
-P06 is functionally complete but is not usability-verified for release. Two
-Android defects must be fixed before P07 and P08 implementation begins:
+The two Android UX defects found by this audit and the notes-specific fallback
+grounding gaps are repaired. Focused and full automated checks, Android
+packaging, and device acceptance pass. P06 is `verified`; P07 may proceed,
+followed by P08.
+
+The original release blockers were:
 
 1. Android system Back exits or backgrounds the application from nested screens
    and confirmation dialogs instead of returning through the workflow.
@@ -64,6 +68,19 @@ Required fix:
 - Allow application exit or backgrounding only from Home.
 - Add unit tests for every transition and repeat the emulator scenarios.
 
+Resolution evidence (October 20, 2026):
+
+- Added the exact `@capacitor/app@8.0.1` plugin and a cancellable native Back
+  event shared by the Capacitor host and React shell.
+- Back now dismisses session/profile deletion dialogs first, then follows
+  `preview → review → create → home` and `profile/saved → home`. Home alone
+  leaves the event unconsumed so Android can exit/background the application.
+- Transition, host-listener, component-dialog, and AppShell integration tests
+  pass.
+- On `emulator-5554`, Back from Create returned to Home and Back from the
+  profile-deletion dialog dismissed the dialog while the activity remained the
+  top resumed activity.
+
 ### P06-UX-02: content overlaps Android system bars
 
 Severity: high.
@@ -88,6 +105,23 @@ Required fix:
   portrait and landscape, while scrolled and with the keyboard open.
 - Repeat at font scales 1.0, 1.3, and 2.0.
 
+Resolution evidence (October 20, 2026):
+
+- Enabled AndroidX edge-to-edge after Capacitor bridge creation and configured
+  Capacitor SystemBars CSS inset handling with a light system-bar style.
+- Applied all four safe-area insets to shell/header/page/preview/dialog regions,
+  used dynamic viewport units, and kept the native header sticky while content
+  scrolls.
+- Native narrow layouts stack the navigation and hide its redundant logo/Home
+  control. This removed status-bar collisions and text clipping at Android font
+  scale 2.0 without viewport-capping normal navigation text.
+- Portrait and landscape checks passed at font scale 2.0; labels remained
+  complete, scrollable content remained reachable, and no horizontal clipping
+  was observed. Normal-scale keyboard-open testing kept the focused Book title
+  field visible and `dumpsys input_method` reported both input-view flags true.
+- Safe-area, large-text reflow, SystemBars configuration, and Android host
+  ordering have focused regression tests.
+
 ## P07 and P08 observations
 
 These are expected missing capabilities, not new P06 regressions:
@@ -101,6 +135,30 @@ These are expected missing capabilities, not new P06 regressions:
   P08 requirements for authoritative atomic Preferences state, verified
   migration, or recovery.
 
+## Notes-specific prompt acceptance
+
+The `Use my notes for more specific prompts` path is now verified at its UI,
+privacy, grounding, online, and offline boundaries:
+
+- Notes mode rejects generation until at least one summary or note field is
+  supplied.
+- The outbound request contains grade/age, optional reading level and Lexile,
+  difficulty, response length, book metadata, skills, specificity, summary,
+  parent notes, and detail notes. It excludes the child's name and internal
+  profile/worksheet identifiers.
+- Hosted mock generation returned summary- and note-grounded prompts without
+  introducing unsupported book details. The review UI displayed `Based on
+parent summary` and `Based on parent notes` provenance.
+- When the WebView network was emulated offline, all three supplied context
+  fields remained in the on-device deterministic fallback. The fallback notice
+  explicitly identified offline use of the supplied summary and notes.
+- When both note fields are present, the deterministic generator includes a
+  separately labeled, bounded excerpt of each rather than silently ignoring
+  the detail-note field. Detail-only input is also covered.
+- On `emulator-5554`, the final installed APK preserved the three form values,
+  produced the two expected grounding labels, and included both note sources in
+  the note-grounded prompt while DevTools network emulation was offline.
+
 ## Additional hardening after the two release blockers
 
 - Give Android controls a 48 dp minimum target and adequate separation.
@@ -112,17 +170,12 @@ These are expected missing capabilities, not new P06 regressions:
 - Run a manual TalkBack pass. UIAutomator did not expose enough WebView DOM
   detail to claim screen-reader verification.
 
-## Repair and verification order
+## Remaining verification order
 
-1. Fix Android Back navigation and add transition tests.
-2. Fix safe-area and dynamic-viewport behavior.
-3. Run focused unit and component tests plus the full repository checks.
-4. Rebuild and install the API 36 debug APK.
-5. Repeat the emulator matrix for Back, dialogs, portrait, landscape, scrolling,
-   keyboard-open, and font scales 1.0, 1.3, and 2.0.
-6. Mark P06 verified again only after an independent agent reviews the code and
-   repeats the two failing emulator scenarios.
-7. Start P07, then P08.
+1. Start P07 native PDF sharing.
+2. Complete P08 atomic native persistence after P07.
+3. Preserve the P06 Back, safe-area, privacy, and notes acceptance matrix in
+   later mobile release candidates.
 
 The emulator was restored after the audit to automatic rotation, font scale
 1.0, and enabled Wi-Fi/mobile data.

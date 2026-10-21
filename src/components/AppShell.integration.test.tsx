@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppShell } from "./AppShell";
@@ -9,6 +9,7 @@ import type {
 } from "@/domain/schemas";
 import { createLocalRepository } from "@/storage/repository";
 import { createBackupJson } from "@/storage/backup";
+import { NATIVE_BACK_EVENT } from "@/client/nativeBack";
 
 const generatedPrompts = Array.from({ length: 4 }, (_, index) => ({
   text: `Choose one important idea for reflection ${index + 1}. Give a detail and explain your reasoning.`,
@@ -38,6 +39,57 @@ describe("Read & Reflect workflow", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.stubGlobal("fetch", mockSuccessfulGeneration());
+  });
+
+  it("uses native Back to return from application screens without exiting", async () => {
+    const repository = createLocalRepository(localStorage);
+    repository.saveProfile({
+      id: "child-back",
+      name: "Aavya",
+      gradeOrAge: "Grade 3",
+      difficulty: "advanced",
+      responseLength: "medium",
+      createdAt: "2026-10-12T00:00:00.000Z",
+      updatedAt: "2026-10-12T00:00:00.000Z",
+    });
+
+    const user = userEvent.setup();
+    render(<AppShell />);
+    await user.click(
+      await screen.findByRole("button", { name: "Create a worksheet" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "What did Aavya read?" }),
+    ).toBeInTheDocument();
+
+    const createBack = new Event(NATIVE_BACK_EVENT, { cancelable: true });
+    act(() => window.dispatchEvent(createBack));
+    expect(createBack.defaultPrevented).toBe(true);
+    expect(
+      screen.getByRole("heading", {
+        name: "Turn one good reading moment into thoughtful writing.",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "+ Add reader" }));
+    const profileBack = new Event(NATIVE_BACK_EVENT, { cancelable: true });
+    act(() => window.dispatchEvent(profileBack));
+    expect(profileBack.defaultPrevented).toBe(true);
+    expect(
+      screen.getByRole("heading", {
+        name: "Turn one good reading moment into thoughtful writing.",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Saved reflections" }));
+    const savedBack = new Event(NATIVE_BACK_EVENT, { cancelable: true });
+    act(() => window.dispatchEvent(savedBack));
+    expect(savedBack.defaultPrevented).toBe(true);
+    expect(
+      screen.getByRole("heading", {
+        name: "Turn one good reading moment into thoughtful writing.",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("creates a profile, generates, validates edits, saves, and reloads a worksheet", async () => {
@@ -106,6 +158,112 @@ describe("Read & Reflect workflow", () => {
     expect(
       screen.getByText("The Chronicles of Narnia: Prince Caspian"),
     ).toBeInTheDocument();
+  });
+
+  it("validates notes mode, sends only the permitted notes payload, and labels grounded prompts", async () => {
+    const repository = createLocalRepository(localStorage);
+    repository.saveProfile({
+      id: "child-notes",
+      name: "Private Child Name",
+      gradeOrAge: "Grade 5",
+      readingLevel: "Advanced",
+      lexile: "900L",
+      difficulty: "challenging",
+      responseLength: "medium",
+      createdAt: "2026-10-12T00:00:00.000Z",
+      updatedAt: "2026-10-12T00:00:00.000Z",
+    });
+    const groundedPrompts = generatedPrompts.map((prompt, index) => ({
+      ...prompt,
+      text:
+        index === 1
+          ? "Use the supplied summary to make a claim and support it from the book."
+          : index === 2
+            ? "Use the supplied parent notes and reading detail to form an inference."
+            : prompt.text,
+      grounding:
+        index === 1
+          ? ("parent_summary" as const)
+          : index === 2
+            ? ("parent_notes" as const)
+            : ("generic" as const),
+    }));
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        ({
+          ok: true,
+          json: async () => ({ prompts: groundedPrompts, provider: "mock" }),
+        }) as Response,
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const user = userEvent.setup();
+    render(<AppShell />);
+    await user.click(
+      await screen.findByRole("button", { name: "Create a worksheet" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Load the Prince Caspian example" }),
+    );
+    await user.click(
+      screen.getByRole("radio", {
+        name: /Use my notes for more specific prompts/,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Generate 4 prompts" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Add a summary or note, or choose general prompts.",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.type(
+      screen.getByLabelText("Short summary of what was read"),
+      "The supplied summary describes a difficult decision.",
+    );
+    await user.type(
+      screen.getByLabelText("Parent notes"),
+      "The reader wondered why the decision was delayed.",
+    );
+    await user.type(
+      screen.getByLabelText("Vocabulary, character, event, or theme notes"),
+      "The supplied detail mentions a locked gate.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Generate 4 prompts" }),
+    );
+
+    await screen.findByLabelText("Prompt 1");
+    expect(screen.getByText("Based on parent summary")).toBeInTheDocument();
+    expect(screen.getByText("Based on parent notes")).toBeInTheDocument();
+    const requestOptions = fetchMock.mock.calls[0]?.[1];
+    if (!requestOptions) throw new Error("Expected prompt request options");
+    const payload = JSON.parse(String(requestOptions.body));
+    expect(payload).toEqual({
+      child: {
+        gradeOrAge: "Grade 5",
+        readingLevel: "Advanced",
+        lexile: "900L",
+        difficulty: "challenging",
+        responseLength: "medium",
+      },
+      book: {
+        title: "The Chronicles of Narnia: Prince Caspian",
+        author: "C. S. Lewis",
+        genre: "fiction",
+        progress: "Pages 1-60",
+      },
+      specificity: "notes",
+      skills: ["evidence_and_explanation", "inference"],
+      parentNotes: "The reader wondered why the decision was delayed.",
+      parentSummary: "The supplied summary describes a difficult decision.",
+      detailNotes: "The supplied detail mentions a locked gate.",
+      variant: 0,
+    });
+    expect(JSON.stringify(payload)).not.toContain("Private Child Name");
+    expect(payload).not.toHaveProperty("profileId");
+    expect(payload).not.toHaveProperty("worksheetId");
   });
 
   it("tracks completed reflections separately from saved worksheets", async () => {

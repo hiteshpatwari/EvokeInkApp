@@ -12,6 +12,10 @@
   --danger: #9d3f3f;
   --shadow: 0 18px 50px rgba(43, 61, 53, 0.09);
   --radius: 18px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 * {
@@ -41,6 +45,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 8% 3%, #edf3e9 0, transparent 30rem), var(--paper);
 }
@@ -85,6 +90,7 @@ h2 {
 }
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 .topbar {
   align-items: center;
@@ -92,7 +98,32 @@ h2 {
   justify-content: space-between;
   margin: 0 auto;
   max-width: 1200px;
-  padding: 22px 28px;
+  padding: calc(22px + var(--safe-area-top)) calc(28px + var(--safe-area-right))
+    22px calc(28px + var(--safe-area-left));
+}
+html[data-native-app="true"] .topbar {
+  background: rgb(251 250 246 / 96%);
+  flex-wrap: wrap;
+  max-width: none;
+  position: sticky;
+  top: 0;
+  z-index: 60;
+}
+html[data-native-app="true"] .brand-button span {
+  -webkit-text-size-adjust: none;
+  font-size: 10px;
+  height: 3.5em;
+  overflow: hidden;
+  text-size-adjust: none;
+  width: 3.5em;
+}
+html[data-native-app="true"] .topbar nav {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+html[data-native-app="true"] .topbar nav button {
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 .brand-button {
   align-items: center;
@@ -134,7 +165,8 @@ h2 {
 .page {
   margin: 0 auto;
   max-width: 1200px;
-  padding: 36px 28px 80px;
+  padding: 36px calc(28px + var(--safe-area-right))
+    calc(80px + var(--safe-area-bottom)) calc(28px + var(--safe-area-left));
 }
 .page--narrow {
   max-width: 900px;
@@ -145,6 +177,9 @@ h2 {
 .loading-state {
   display: grid;
   min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--safe-area-top) var(--safe-area-right) var(--safe-area-bottom)
+    var(--safe-area-left);
   place-items: center;
   color: var(--muted);
 }
@@ -296,15 +331,17 @@ h2 {
   box-shadow:
     0 24px 70px rgb(24 34 29 / 24%),
     0 0 0 100vmax rgb(24 34 29 / 38%);
-  left: 50%;
-  margin: 0;
-  max-height: calc(100vh - 32px);
-  max-width: min(620px, calc(100vw - 32px));
+  inset: calc(16px + var(--safe-area-top)) calc(16px + var(--safe-area-right))
+    calc(16px + var(--safe-area-bottom)) calc(16px + var(--safe-area-left));
+  height: max-content;
+  margin: auto;
+  max-height: calc(
+    100dvh - 32px - var(--safe-area-top) - var(--safe-area-bottom)
+  );
+  max-width: 620px;
   overflow: auto;
   position: fixed;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
+  width: calc(100vw - 32px - var(--safe-area-left) - var(--safe-area-right));
   z-index: 100;
 }
 .dashboard-grid {
@@ -659,7 +696,9 @@ textarea {
 .preview-page {
   background: #e8ece8;
   min-height: 100vh;
-  padding: 26px 28px 60px;
+  min-height: 100dvh;
+  padding: 26px calc(28px + var(--safe-area-right))
+    calc(60px + var(--safe-area-bottom)) calc(28px + var(--safe-area-left));
 }
 .preview-toolbar {
   margin: 0 auto 24px;
@@ -817,7 +856,12 @@ textarea {
   .topbar {
     align-items: flex-start;
     gap: 15px;
-    padding: 18px;
+    padding: calc(18px + var(--safe-area-top))
+      calc(18px + var(--safe-area-right)) 18px
+      calc(18px + var(--safe-area-left));
+  }
+  html[data-native-app="true"] .topbar {
+    padding-top: max(calc(18px + var(--safe-area-top)), 88px);
   }
   .brand-button strong {
     display: none;
@@ -827,7 +871,8 @@ textarea {
     justify-content: flex-end;
   }
   .page {
-    padding: 24px 18px 60px;
+    padding: 24px calc(18px + var(--safe-area-right))
+      calc(60px + var(--safe-area-bottom)) calc(18px + var(--safe-area-left));
   }
   .hero-card,
   .dashboard-grid,
@@ -859,7 +904,8 @@ textarea {
     grid-template-columns: 1fr;
   }
   .preview-page {
-    padding: 18px 0 40px;
+    padding: 18px var(--safe-area-right) calc(40px + var(--safe-area-bottom))
+      var(--safe-area-left);
   }
   .preview-toolbar {
     padding: 0 18px;
@@ -886,6 +932,43 @@ textarea {
   }
   .worksheet__permission,
   .worksheet-prompt h2 {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 1000px) {
+  html[data-native-app="true"] .topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  html[data-native-app="true"] .brand-button {
+    display: none;
+  }
+  html[data-native-app="true"] .brand-button strong {
+    display: none;
+  }
+  html[data-native-app="true"] .topbar nav {
+    align-items: stretch;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+  }
+  html[data-native-app="true"] .topbar nav button {
+    min-width: 0;
+    text-align: left;
+    width: 100%;
+  }
+  html[data-native-app="true"] .topbar nav button:first-child {
+    flex: 0 0 auto;
+  }
+  html[data-native-app="true"] .topbar nav button:last-child {
+    flex: 1 1 auto;
+  }
+  html[data-native-app="true"] .hero-card h1 {
+    font-size: min(2.15rem, 10vw);
+    overflow-wrap: anywhere;
+  }
+  html[data-native-app="true"] .hero-card .eyebrow {
     overflow-wrap: anywhere;
   }
 }

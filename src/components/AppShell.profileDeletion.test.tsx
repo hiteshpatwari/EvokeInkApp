@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
@@ -8,6 +8,7 @@ import type {
 } from "@/domain/schemas";
 import { createLocalRepository } from "@/storage/repository";
 import { AppShell } from "./AppShell";
+import { NATIVE_BACK_EVENT } from "@/client/nativeBack";
 
 const aavya: ChildProfile = {
   id: "child-aavya",
@@ -63,6 +64,25 @@ describe("child profile deletion", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.stubGlobal("fetch", vi.fn());
+  });
+
+  it("dismisses the profile deletion dialog when native Back is pressed", async () => {
+    const repository = createLocalRepository(localStorage);
+    repository.saveProfile(aavya);
+
+    const user = userEvent.setup();
+    render(<AppShell />);
+
+    const deleteTrigger = await screen.findByRole("button", {
+      name: "Delete Aavya profile",
+    });
+    await user.click(deleteTrigger);
+    const back = new Event(NATIVE_BACK_EVENT, { cancelable: true });
+    act(() => window.dispatchEvent(back));
+
+    expect(back.defaultPrevented).toBe(true);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await waitFor(() => expect(deleteTrigger).toHaveFocus());
   });
 
   it("retains historical worksheets, restores focus on cancel, and selects another active child", async () => {

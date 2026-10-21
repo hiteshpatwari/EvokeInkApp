@@ -22,6 +22,11 @@ import {
   toNetworkGenerationInput,
 } from "@/client/promptRequest";
 import {
+  getPreviousScreen,
+  NATIVE_BACK_EVENT,
+  type AppScreen,
+} from "@/client/nativeBack";
+import {
   childProfileSchema,
   generationInputSchema,
   readingSessionSchema,
@@ -34,8 +39,6 @@ import { downloadWorksheet } from "@/pdf/downloadWorksheet";
 import { DataBackupPanel } from "./DataBackupPanel";
 import { PromptEditor } from "./PromptEditor";
 import { WorksheetPreview } from "./WorksheetPreview";
-
-type Screen = "home" | "profile" | "create" | "review" | "preview" | "saved";
 
 const DIFFICULTIES: Array<{ value: Difficulty; label: string }> = [
   { value: "accessible", label: "Accessible" },
@@ -86,7 +89,7 @@ const emptyCreation: CreationState = {
 
 export function AppShell() {
   const [ready, setReady] = useState(false);
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<AppScreen>("home");
   const [profiles, setProfiles] = useState<ChildProfile[]>([]);
   const [sessions, setSessions] = useState<ReadingSession[]>([]);
   const [selectedChildId, setSelectedChildId] = useState("");
@@ -452,7 +455,7 @@ export function AppShell() {
     }
   };
 
-  const saveWorkingSession = (nextScreen: Screen = "preview") => {
+  const saveWorkingSession = (nextScreen: AppScreen = "preview") => {
     if (!workingSession) return;
     const candidate = {
       ...workingSession,
@@ -489,7 +492,7 @@ export function AppShell() {
       specificity: "general",
     }));
 
-  const loadSession = (session: ReadingSession, target: Screen) => {
+  const loadSession = (session: ReadingSession, target: AppScreen) => {
     setSelectedChildId(session.childId);
     setWorkingSession(session);
     setCreation({
@@ -639,6 +642,32 @@ export function AppShell() {
     setError("");
     setNotice("");
   };
+
+  useEffect(() => {
+    const handleNativeBack = (event: Event) => {
+      if (pendingDeleteSessionId) {
+        event.preventDefault();
+        cancelDeleteSession();
+        return;
+      }
+      if (pendingDeleteProfileId) {
+        event.preventDefault();
+        cancelDeleteProfile();
+        return;
+      }
+
+      const previousScreen = getPreviousScreen(screen);
+      if (!previousScreen) return;
+      event.preventDefault();
+      setError("");
+      setNotice("");
+      setScreen(previousScreen);
+    };
+
+    window.addEventListener(NATIVE_BACK_EVENT, handleNativeBack);
+    return () =>
+      window.removeEventListener(NATIVE_BACK_EVENT, handleNativeBack);
+  }, [pendingDeleteProfileId, pendingDeleteSessionId, screen]);
 
   if (!ready)
     return (

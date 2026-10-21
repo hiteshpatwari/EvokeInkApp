@@ -8,6 +8,14 @@ const config: CapacitorConfig = {
     hostname: "localhost",
     androidScheme: "https",
   },
+  plugins: {
+    SystemBars: {
+      insetsHandling: "css",
+      initialViewportFitValueHint: "cover",
+      style: "LIGHT",
+      hidden: false,
+    },
+  },
 };
 
 export default config;
