@@ -1,9 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PromptGenerator } from "@/domain/promptGenerator";
 import type { NetworkGenerationInput } from "@/domain/schemas";
 import {
   createPromptPostHandler,
+  createPromptOptionsHandler,
   InMemoryPromptControlStore,
+  promptApiConfigFromEnvironment,
   type PromptApiDependencies,
 } from "./promptApiControls";
 
@@ -27,6 +29,11 @@ const payload: NetworkGenerationInput = {
   parentSummary: "",
   detailNotes: "",
 };
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 function request(
   body: unknown = payload,
@@ -84,13 +91,119 @@ function dependencies(
 }
 
 describe("prompt API controls", () => {
+  it("answers an exact allowed-origin preflight with only the prompt contract", async () => {
+    const response = createPromptOptionsHandler(dependencies())(
+      new Request("https://read.example/api/prompts", {
+        method: "OPTIONS",
+        headers: {
+          origin: "https://read.example",
+          "access-control-request-method": "POST",
+          "access-control-request-headers":
+            "content-type, x-installation-token",
+        },
+      }),
+    );
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe(
+      "https://read.example",
+    );
+    expect(response.headers.get("access-control-allow-methods")).toBe(
+      "POST, OPTIONS",
+    );
+    expect(response.headers.get("access-control-allow-headers")).toBe(
+      "Content-Type, X-Installation-Token",
+    );
+    expect(response.headers.get("vary")).toBe("Origin");
+    expect(response.headers.has("access-control-allow-credentials")).toBe(
+      false,
+    );
+  });
+
+  it("rejects preflights from disallowed origins or for broader methods and headers", () => {
+    const handler = createPromptOptionsHandler(dependencies());
+    const preflight = (headers: Record<string, string>) =>
+      handler(
+        new Request("https://read.example/api/prompts", {
+          method: "OPTIONS",
+          headers: {
+            origin: "https://read.example",
+            "access-control-request-method": "POST",
+            "access-control-request-headers":
+              "content-type, x-installation-token",
+            ...headers,
+          },
+        }),
+      );
+
+    expect(preflight({ origin: "https://attacker.example" }).status).toBe(403);
+    expect(
+      preflight({ "access-control-request-method": "DELETE" }).status,
+    ).toBe(403);
+    expect(
+      preflight({ "access-control-request-headers": "authorization" }).status,
+    ).toBe(403);
+  });
+
+  it("requires a stable quota hash secret before OpenAI mode can start", () => {
+    vi.stubEnv("AI_PROVIDER", "openai");
+    vi.stubEnv("AI_QUOTA_HASH_SECRET", "");
+
+    expect(() => promptApiConfigFromEnvironment()).toThrow(
+      "AI_QUOTA_HASH_SECRET is required",
+    );
+  });
+
+  it("allows key-free mock mode without generating a runtime secret", () => {
+    vi.stubEnv("AI_PROVIDER", "mock");
+    vi.stubEnv("AI_QUOTA_HASH_SECRET", "");
+    const randomUUID = vi.spyOn(globalThis.crypto, "randomUUID");
+
+    expect(promptApiConfigFromEnvironment().quotaHashSecret).toBe(
+      "mock-only-no-quota-reservations",
+    );
+    expect(randomUUID).not.toHaveBeenCalled();
+  });
+
   it("accepts a valid privacy-minimized generation request", async () => {
     const response = await createPromptPostHandler(dependencies())(request());
     expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe(
+      "https://read.example",
+    );
+    expect(response.headers.get("vary")).toBe("Origin");
     await expect(response.json()).resolves.toMatchObject({
       provider: "openai",
       fallback: false,
     });
+  });
+
+  it("never emits an allow-origin header for a disallowed POST origin", async () => {
+    const response = await createPromptPostHandler(dependencies())(
+      request(payload, { origin: "https://attacker.example" }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.has("access-control-allow-origin")).toBe(false);
+    expect(response.headers.get("vary")).toBe("Origin");
+  });
+
+  it("allows configured native origins only in mock mode", () => {
+    vi.stubEnv(
+      "APP_ALLOWED_ORIGINS",
+      "https://localhost,capacitor://localhost",
+    );
+    vi.stubEnv("AI_PROVIDER", "mock");
+    expect(promptApiConfigFromEnvironment().allowedOrigins).toEqual([
+      "https://localhost",
+      "capacitor://localhost",
+    ]);
+
+    vi.stubEnv("AI_PROVIDER", "openai");
+    vi.stubEnv("AI_QUOTA_HASH_SECRET", "test-only-quota-key");
+    expect(() => promptApiConfigFromEnvironment()).toThrow(
+      "Native app origins require AI_PROVIDER=mock",
+    );
   });
 
   it("rejects child names and local record identifiers at the network boundary", async () => {
