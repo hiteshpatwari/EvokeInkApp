@@ -35,7 +35,10 @@ import {
   createLocalRepository,
   type StorageDiagnostic,
 } from "@/storage/repository";
-import { downloadWorksheet } from "@/pdf/downloadWorksheet";
+import {
+  exportWorksheet,
+  getWorksheetExportExperience,
+} from "@/pdf/worksheetExport";
 import { DataBackupPanel } from "./DataBackupPanel";
 import { PromptEditor } from "./PromptEditor";
 import { WorksheetPreview } from "./WorksheetPreview";
@@ -109,6 +112,8 @@ export function AppShell() {
     StorageDiagnostic[]
   >([]);
   const [generating, setGenerating] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const exportExperience = getWorksheetExportExperience();
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(
     null,
   );
@@ -146,8 +151,10 @@ export function AppShell() {
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
-      document.querySelector<HTMLElement>("main")?.focus();
+      document.querySelector<HTMLElement>("main")?.focus({
+        preventScroll: true,
+      });
+      (document.scrollingElement ?? document.documentElement).scrollTop = 0;
     });
     return () => cancelAnimationFrame(frame);
   }, [screen]);
@@ -480,6 +487,45 @@ export function AppShell() {
     ]);
     setNotice("Worksheet saved on this device.");
     setScreen(nextScreen);
+  };
+
+  const handleWorksheetExport = async () => {
+    if (!workingSession || exportingPdf) return;
+    setExportingPdf(true);
+    setError("");
+    try {
+      const result = await exportWorksheet(workingSession);
+      if (result.status === "downloaded") {
+        setNotice("The worksheet PDF download has started.");
+      } else if (result.status === "shared") {
+        setNotice(
+          result.cleanupFailed
+            ? "The PDF was shared, but its temporary cache copy could not be removed. Android will clear app cache automatically."
+            : "Share sheet closed. The temporary PDF was removed.",
+        );
+      } else if (result.status === "cancelled") {
+        setNotice(
+          result.cleanupFailed
+            ? "Sharing was cancelled, but the temporary cache copy could not be removed. Android will clear app cache automatically."
+            : "Sharing cancelled. No PDF was saved.",
+        );
+      } else {
+        setError("PDF sharing is unavailable on this device.");
+      }
+    } catch (caught) {
+      const cleanupFailed =
+        typeof caught === "object" &&
+        caught !== null &&
+        "cleanupFailed" in caught &&
+        caught.cleanupFailed === true;
+      setError(
+        cleanupFailed
+          ? "The PDF could not be shared, and its temporary cache copy could not be removed. Android will clear app cache automatically."
+          : "The PDF could not be shared. Please try again.",
+      );
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   const loadDemoBook = () =>
@@ -1417,19 +1463,24 @@ export function AppShell() {
               >
                 Edit prompts
               </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => window.print()}
-              >
-                Print
-              </button>
+              {exportExperience.printAvailable && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => window.print()}
+                >
+                  Print
+                </button>
+              )}
               <button
                 type="button"
                 className="primary-button"
-                onClick={() => downloadWorksheet(workingSession)}
+                onClick={() => void handleWorksheetExport()}
+                disabled={exportingPdf}
               >
-                Download PDF
+                {exportingPdf
+                  ? "Preparing PDF…"
+                  : exportExperience.primaryLabel}
               </button>
               <button
                 type="button"
