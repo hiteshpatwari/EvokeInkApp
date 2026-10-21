@@ -55,8 +55,11 @@ export const bookSchema = z.object({
     .min(3, "Enter pages or chapters completed")
     .max(100)
     .refine(
-      (value) => /(?:page|pages|p\.?|chapter|chapters|ch\.?)\s*\d/i.test(value),
-      "Use a value such as “Pages 1-60” or “Chapters 1-3”",
+      (value) =>
+        /(?:page|pages|p\.?|chapter|chapters|ch\.?)\s*\d/i.test(value) ||
+        /^\d+\s*[-–—]\s*\d+$/.test(value) ||
+        /^(?:full|complete|completed)$/i.test(value),
+      "Use a value such as “1-60”, “Pages 1-60”, “Chapters 1-3”, or “Complete”",
     ),
 });
 

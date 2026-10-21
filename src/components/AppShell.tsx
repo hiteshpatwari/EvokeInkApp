@@ -1315,7 +1315,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
                 Pages or chapters completed{" "}
                 <input
                   required
-                  placeholder="Pages 1-60 or Chapters 1-3"
+                  placeholder="1-60, Chapters 1-3, or Complete"
                   value={creation.progress}
                   onChange={(event) =>
                     setCreation({ ...creation, progress: event.target.value })

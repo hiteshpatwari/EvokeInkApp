@@ -30,7 +30,19 @@ describe("generation input schema", () => {
     );
   });
 
-  it.each(["", "   ", "Pages", "1"])(
+  it.each(["1-60", "1 – 60", "full", "complete", "Completed"])(
+    'accepts concise reading progress: "%s"',
+    (progress) => {
+      expect(
+        generationInputSchema.parse({
+          ...validInput,
+          book: { ...validInput.book, progress },
+        }).book.progress,
+      ).toBe(progress);
+    },
+  );
+
+  it.each(["", "   ", "Pages", "1", "almost done"])(
     'rejects an invalid progress value: "%s"',
     (progress) => {
       expect(() =>

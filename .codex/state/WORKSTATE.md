@@ -15,6 +15,9 @@ persistent logs, traces, and Logpush remain disabled. P02 and P09 stay
 
 ## Completed work
 
+- Fixed the reading-progress validation/UI mismatch: concise ranges such as
+  `1-60` and completion values `full`, `complete`, and `completed` are accepted;
+  ambiguous values such as `1` remain rejected. Focused and full tests pass.
 - Added a validated operational-event boundary containing only a generated
   request ID, minute timestamp, bounded latency/status/provider/fallback/error,
   rate-limit decision, optional bounded token/cost fields, and a short HMAC
