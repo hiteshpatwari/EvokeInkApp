@@ -456,4 +456,34 @@ describe("prompt API controls", () => {
       "private family details",
     );
   });
+
+  it("keeps status, body, and CORS identical when the sink rejects asynchronously", async () => {
+    const baseline = await createPromptPostHandler(dependencies())(request());
+    const baselineBody = await baseline.json();
+    const record = vi.fn(() => Promise.reject(new Error("async sink failed")));
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const response = await createPromptPostHandler(
+        dependencies({ events: { record } }),
+      )(request());
+      const body = await response.json();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      expect(response.status).toBe(baseline.status);
+      expect(body).toEqual(baselineBody);
+      expect(response.headers.get("access-control-allow-origin")).toBe(
+        baseline.headers.get("access-control-allow-origin"),
+      );
+      expect(response.headers.get("vary")).toBe(baseline.headers.get("vary"));
+      expect(response.headers.get("cache-control")).toBe(
+        baseline.headers.get("cache-control"),
+      );
+      expect(record).toHaveBeenCalledOnce();
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
 });

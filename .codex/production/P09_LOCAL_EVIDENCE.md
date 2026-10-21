@@ -17,9 +17,11 @@
 Automated tests inject disallowed content through extra event fields, error
 objects, request content, and sink failures. Only schema fields reach the sink,
 request IDs are generated UUIDs, quota abuse keys are bounded HMAC prefixes,
-and telemetry failure cannot fail the user request. Synthetic success/failure,
-aggregation arithmetic, ambiguous-target rejection, and both dry-run plans are
-covered.
+and synchronous throws or asynchronous sink rejections cannot fail the user
+request or escape as unhandled rejections. The route-level regression proves
+status, response body, CORS, and cache headers remain identical and only one
+event attempt occurs. Synthetic success/failure, aggregation arithmetic,
+ambiguous-target rejection, and both dry-run plans are covered.
 
 ## Honest limitation
 
@@ -30,7 +32,7 @@ remains running.
 
 ## Validation executed
 
-- `pnpm test` — 34 files / 170 tests passed.
+- `pnpm test` — 34 files / 172 tests passed.
 - `pnpm lint`, `pnpm typecheck`, and `pnpm format:check` — passed.
 - Mock Next production build — passed.
 - `pnpm exec vinext check` — 100% compatible: 9 supported, 0 partial,

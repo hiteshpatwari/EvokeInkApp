@@ -54,7 +54,7 @@ export type PromptOperationalEvent = z.infer<
 >;
 
 export interface PromptEventSink {
-  record(event: PromptOperationalEvent): void;
+  record(event: PromptOperationalEvent): void | Promise<void>;
 }
 
 function finiteInteger(
@@ -155,7 +155,10 @@ export function emitPromptOperationalEvent(
 ): boolean {
   try {
     const event = sanitizePromptOperationalEvent(candidate);
-    sink.record(event);
+    const pending = sink.record(event);
+    if (pending) {
+      void Promise.resolve(pending).catch(() => undefined);
+    }
     return true;
   } catch {
     return false;

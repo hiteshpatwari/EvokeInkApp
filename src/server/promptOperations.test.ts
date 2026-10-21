@@ -66,6 +66,24 @@ describe("privacy-safe prompt operations", () => {
     );
   });
 
+  it("immediately contains an asynchronously rejected sink attempt", async () => {
+    const rejection = Promise.reject(new Error("async sink failed"));
+    const catchAttempt = vi.spyOn(rejection, "catch");
+    const record = vi.fn(() => rejection);
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      expect(emitPromptOperationalEvent({ record }, base)).toBe(true);
+      expect(record).toHaveBeenCalledOnce();
+      expect(catchAttempt).toHaveBeenCalledOnce();
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
   it("aggregates availability, error, latency, quota, fallback, and cost counters", () => {
     const summary = aggregatePromptOperationalEvents([
       base,

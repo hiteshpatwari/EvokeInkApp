@@ -19,8 +19,9 @@ usage reconciliation, and live switch/rollback evidence remain outstanding.
   request ID, minute timestamp, bounded latency/status/provider/fallback/error,
   rate-limit decision, optional bounded token/cost fields, and a short HMAC
   prefix only for quota-denial correlation.
-- Unknown/private inputs are stripped before emission. Telemetry sink failures
-  are contained and do not affect the user response.
+- Unknown/private inputs are stripped before emission. Synchronous sink throws
+  and asynchronous sink rejections are contained immediately, do not create
+  unhandled rejections, and do not affect the user response.
 - Added zero-cost console and deterministic in-memory sinks plus aggregation for
   availability, HTTP errors, fallback, quota denial, latency, estimated cost,
   provider, and normalized error counters.
@@ -43,7 +44,8 @@ usage reconciliation, and live switch/rollback evidence remain outstanding.
 
 ## Validation evidence
 
-- Full Vitest: 34 files / 170 tests passed.
+- Full Vitest: 34 files / 172 tests passed, including route-level response/CORS
+  equivalence and unhandled-rejection guards for an asynchronously failing sink.
 - Formatting, lint, root/mobile TypeScript, and Next production build passed.
 - Vinext reported 9 supported, 0 partial, 0 issues; vinext build passed.
 - Cloudflare prebuilt deploy dry-run passed and made no deployment.
