@@ -25,7 +25,10 @@
     "mobile:typecheck": "pnpm --filter @read-and-reflect/mobile typecheck",
     "mobile:build": "pnpm --filter @read-and-reflect/mobile build",
     "mobile:sync": "pnpm --filter @read-and-reflect/mobile cap:sync",
-    "mobile:secrets": "pnpm --filter @read-and-reflect/mobile secrets:check"
+    "mobile:secrets": "pnpm --filter @read-and-reflect/mobile secrets:check",
+    "ops:probe": "pwsh -NoLogo -NoProfile -File scripts/Invoke-SyntheticProbe.ps1",
+    "ops:failover": "pwsh -NoLogo -NoProfile -File scripts/Invoke-MockFailover.ps1",
+    "ops:rollback": "pwsh -NoLogo -NoProfile -File scripts/Invoke-WorkerRollback.ps1"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",

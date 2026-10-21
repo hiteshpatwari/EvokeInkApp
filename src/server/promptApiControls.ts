@@ -9,6 +9,11 @@ import {
   generateWithFallback,
   type GenerationOptions,
 } from "./generatePrompts";
+import {
+  emitPromptOperationalEvent,
+  type PromptEventSink,
+  type PromptOperationalEvent,
+} from "./promptOperations";
 
 const installationTokenSchema = z.uuid();
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
@@ -41,26 +46,10 @@ export interface PromptControlStore {
     | Promise<"allowed" | "installation_quota" | "ip_quota" | "budget_open">;
 }
 
-export interface PromptOperationalEvent {
-  outcome: "success" | "rejected" | "fallback";
-  category:
-    | "generated"
-    | "content_type"
-    | "origin"
-    | "identity"
-    | "body_size"
-    | "invalid_request"
-    | "installation_quota"
-    | "ip_quota"
-    | "budget_open"
-    | "internal_error";
-  provider?: "mock" | "openai";
-  durationMs: number;
-}
-
-export interface PromptEventSink {
-  record(event: PromptOperationalEvent): void;
-}
+export type {
+  PromptEventSink,
+  PromptOperationalEvent,
+} from "./promptOperations";
 
 export interface PromptApiDependencies {
   controls: PromptControlStore;
@@ -264,17 +253,25 @@ class InvalidJsonError extends Error {}
 export function createPromptPostHandler(dependencies: PromptApiDependencies) {
   return async function POST(request: Request) {
     const startedAt = performance.now();
-    const record = (
-      event: Omit<PromptOperationalEvent, "durationMs">,
-    ): void => {
-      dependencies.events.record({
-        ...event,
+    const requestId = crypto.randomUUID();
+    const record = (event: Record<string, unknown>): void => {
+      emitPromptOperationalEvent(dependencies.events, {
+        requestId,
+        timestamp: (dependencies.now ?? (() => new Date()))().toISOString(),
         durationMs: Math.round(performance.now() - startedAt),
+        route: "/api/prompts",
+        ...event,
       });
     };
     const origin = request.headers.get("origin");
-    const finish = (response: Response) =>
-      withPromptCors(response, origin, dependencies.config.allowedOrigins);
+    const finish = (response: Response) => {
+      response.headers.set("Cache-Control", "no-store");
+      return withPromptCors(
+        response,
+        origin,
+        dependencies.config.allowedOrigins,
+      );
+    };
 
     const contentType =
       request.headers
@@ -283,18 +280,33 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
         ?.trim()
         .toLowerCase() ?? "";
     if (contentType !== "application/json") {
-      record({ outcome: "rejected", category: "content_type" });
+      record({
+        status: 415,
+        fallback: false,
+        errorCategory: "content_type",
+        rateLimitDecision: "not_checked",
+      });
       return finish(jsonError("JSON is required.", 415));
     }
 
     if (!origin || !dependencies.config.allowedOrigins.includes(origin)) {
-      record({ outcome: "rejected", category: "origin" });
+      record({
+        status: 403,
+        fallback: false,
+        errorCategory: "origin",
+        rateLimitDecision: "not_checked",
+      });
       return finish(jsonError("This request origin is not allowed.", 403));
     }
 
     const installationToken = request.headers.get("x-installation-token");
     if (!installationTokenSchema.safeParse(installationToken).success) {
-      record({ outcome: "rejected", category: "identity" });
+      record({
+        status: 400,
+        fallback: false,
+        errorCategory: "identity",
+        rateLimitDecision: "not_checked",
+      });
       return finish(
         jsonError("A valid installation identity is required.", 400),
       );
@@ -331,7 +343,15 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
           : "allowed";
 
       if (reservation === "installation_quota" || reservation === "ip_quota") {
-        record({ outcome: "rejected", category: reservation });
+        record({
+          status: 429,
+          provider: providerName,
+          fallback: false,
+          errorCategory: reservation,
+          rateLimitDecision: reservation,
+          abuseKey: installationKey.slice(0, 12),
+          estimatedCostMicros: 0,
+        });
         return finish(
           jsonError("The monthly generation allowance has been reached.", 429),
         );
@@ -352,23 +372,49 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
             }
           : await generateWithFallback(input, dependencies.generationOptions);
       record({
-        outcome: result.fallback ? "fallback" : "success",
-        category: reservation === "budget_open" ? "budget_open" : "generated",
-        provider: result.provider,
+        status: 200,
+        provider: providerName,
+        fallback: result.fallback,
+        errorCategory:
+          reservation === "budget_open"
+            ? "budget_open"
+            : result.fallback
+              ? "provider_failure"
+              : "none",
+        rateLimitDecision: reservation,
+        estimatedCostMicros:
+          providerName === "openai" && reservation === "allowed"
+            ? dependencies.config.estimatedRequestCostMicros
+            : 0,
       });
       return finish(NextResponse.json(result));
     } catch (error) {
       if (error instanceof BodyTooLargeError) {
-        record({ outcome: "rejected", category: "body_size" });
+        record({
+          status: 413,
+          fallback: false,
+          errorCategory: "body_size",
+          rateLimitDecision: "not_checked",
+        });
         return finish(jsonError("The request is too large.", 413));
       }
       if (error instanceof InvalidJsonError || error instanceof ZodError) {
-        record({ outcome: "rejected", category: "invalid_request" });
+        record({
+          status: 400,
+          fallback: false,
+          errorCategory: "invalid_request",
+          rateLimitDecision: "not_checked",
+        });
         return finish(
           jsonError("Please check the worksheet details and try again.", 400),
         );
       }
-      record({ outcome: "rejected", category: "internal_error" });
+      record({
+        status: 500,
+        fallback: false,
+        errorCategory: "internal_error",
+        rateLimitDecision: "not_checked",
+      });
       return finish(
         jsonError("Prompts could not be generated. Please try again.", 500),
       );

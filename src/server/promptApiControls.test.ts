@@ -289,6 +289,12 @@ describe("prompt API controls", () => {
         )
       ).status,
     ).toBe(429);
+    expect(deps.events.record).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        rateLimitDecision: "ip_quota",
+        abuseKey: expect.stringMatching(/^[0-9a-f]{12}$/),
+      }),
+    );
   });
 
   it("opens the budget circuit before sending a provider request", async () => {
@@ -385,12 +391,69 @@ describe("prompt API controls", () => {
     });
   });
 
+  it("emits a normalized provider-failure signal without provider content", async () => {
+    const events = { record: vi.fn(() => undefined) };
+    const primary: PromptGenerator = {
+      generate: vi.fn(async () => {
+        throw Object.assign(new Error("private provider response"), {
+          status: 503,
+          response: { data: "private book and notes" },
+        });
+      }),
+    };
+    const response = await createPromptPostHandler(
+      dependencies({
+        events,
+        generationOptions: {
+          providerName: "openai",
+          apiKey: "test-key",
+          primary,
+        },
+      }),
+    )(request());
+
+    expect(response.status).toBe(200);
+    expect(events.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "openai",
+        fallback: true,
+        errorCategory: "provider_failure",
+      }),
+    );
+    expect(JSON.stringify(events.record.mock.calls)).not.toMatch(
+      /private provider response|private book and notes|A Book/,
+    );
+  });
+
   it("emits only bounded operational metadata", async () => {
-    const events = { record: vi.fn() };
+    const events = { record: vi.fn(() => undefined) };
     await createPromptPostHandler(dependencies({ events }))(request());
     expect(events.record).toHaveBeenCalledWith(
-      expect.objectContaining({ outcome: "success", provider: "openai" }),
+      expect.objectContaining({
+        route: "/api/prompts",
+        status: 200,
+        provider: "openai",
+        fallback: false,
+        errorCategory: "none",
+        rateLimitDecision: "allowed",
+      }),
     );
     expect(JSON.stringify(events.record.mock.calls)).not.toContain("A Book");
+  });
+
+  it("does not expose private data or break the response when the sink fails", async () => {
+    const events = {
+      record: vi.fn(() => {
+        throw new Error("sink failed with private notes");
+      }),
+    };
+    const response = await createPromptPostHandler(dependencies({ events }))(
+      request({ ...payload, parentNotes: "private family details" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(events.record.mock.calls)).not.toContain(
+      "private family details",
+    );
   });
 });

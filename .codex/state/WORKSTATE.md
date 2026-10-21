@@ -2,85 +2,69 @@
 
 ## Objective
 
-Complete the production mobile path after P06. P07 native PDF sharing and P08
-authoritative native persistence are now implemented and verified on Android.
+Build the local P09 production-operations foundation without claiming or
+performing owner-gated production OpenAI activation.
 
 ## Current status
 
-P08 is verified on branch `codex/p08-native-persistence`; independent re-review
-approved the transactional rollback, queue recovery, migration-marker, UI-copy,
-automated, build, and Android acceptance evidence. The Android client awaits an
-official Capacitor Preferences adapter before React renders, migrates only valid
-canonical WebView state once, treats native state as authoritative, and verifies
-queued writes/removals before the UI reports success. Browser storage and the
-verified P06/P07 paths remain intact.
+P09 is running on branch `codex/p09-operations-foundation`. Privacy-safe prompt
+events, deterministic counters, a fixed-data synthetic probe, and dry-run-first
+mock failover/rollback tooling are implemented and locally verified. P09 is not
+verified because production retention/access, provider alerts, live failure,
+usage reconciliation, and live switch/rollback evidence remain outstanding.
 
 ## Completed work
 
-- Added exact `@capacitor/preferences@8.0.1` and a dependency-injected native
-  adapter that stores one canonical v2 document, serializes mutations, verifies
-  read-after-write/removal, and exposes `flush()` as the durability gate.
-- Added non-destructive one-time migration with exact state and marker
-  verification. Invalid, unsupported, and empty legacy values remain eligible
-  for a later valid migration; corrupt native data is never replaced from
-  WebView.
-- AppShell now awaits native flush before changing visible persisted state or
-  showing success. Browser defaults, backup merge/replace, corruption recovery,
-  immutable child snapshots, prompt generation, and PDF sharing are preserved.
-- Recorded P08 proof in `.codex/production/P08_NATIVE_PERSISTENCE.md`.
-
-- Added a host-neutral worksheet-export boundary. The browser default retains
-  existing jsPDF download behavior and reports that browser Print is available.
-- Added an injected native export adapter that emits the existing jsPDF bytes,
-  preserves every byte through base64 encoding, sanitizes and bounds the cache
-  filename, writes through `Directory.Cache`, and shares the returned content
-  URI through the Android chooser.
-- Added exact `@capacitor/filesystem@8.1.5` and `@capacitor/share@8.0.3`
-  dependencies and synchronized their Android projects.
-- Native preview copy now says `Share PDF` and omits the non-working browser
-  Print action. The control is disabled as `Preparing PDF…` while active.
-- Sharing success, cancellation, unavailable capability, and failure have
-  distinct user-visible outcomes. Cleanup failure is reported without hiding or
-  replacing the primary outcome.
-- Added automated coverage for bytes/base64, filename safety, success,
-  cancellation, failure, cleanup in every post-write path, cleanup failure,
-  unavailable sharing, duplicate-action prevention, host installation, and
-  browser regression.
-- Recorded full implementation and emulator evidence in
-  `.codex/production/P07_NATIVE_PDF_SHARING.md` and marked P07 verified.
+- Added a validated operational-event boundary containing only a generated
+  request ID, minute timestamp, bounded latency/status/provider/fallback/error,
+  rate-limit decision, optional bounded token/cost fields, and a short HMAC
+  prefix only for quota-denial correlation.
+- Unknown/private inputs are stripped before emission. Telemetry sink failures
+  are contained and do not affect the user response.
+- Added zero-cost console and deterministic in-memory sinks plus aggregation for
+  availability, HTTP errors, fallback, quota denial, latency, estimated cost,
+  provider, and normalized error counters.
+- Instrumented all prompt POST outcomes at the route/control boundary and set
+  prompt responses to `Cache-Control: no-store`.
+- Added a non-personal synthetic web/health/mock-prompt probe that reports only
+  bounded machine-readable failure categories.
+- Added exact-target, dry-run-first PowerShell tools for mock failover and
+  verified-version rollback. Execution requires an explicit switch and
+  PowerShell confirmation, followed by the synthetic probe.
+- Added the P09 runbook and local evidence record; marked P09 `running`.
 
 ## Files or areas changed
 
-- `src/storage/repository.ts`, `src/components/AppShell.tsx`,
-  `src/components/DataBackupPanel.tsx`, and focused tests.
-- `mobile/src/nativePersistence.ts`, awaited bootstrap, focused tests, exact
-  dependency, lockfile, and synchronized Android plugin Gradle files.
-- P08 production evidence, mobile README, issue register, and this workstate.
+- `src/server/promptOperations.ts`, prompt route controls, synthetic probe, and
+  focused tests.
+- `scripts/Invoke-SyntheticProbe.ps1`, `Invoke-MockFailover.ps1`, and
+  `Invoke-WorkerRollback.ps1`.
+- P09 issue status, runbook/evidence, package scripts, and this workstate.
 
 ## Validation evidence
 
-- Root Vitest passed 31 files / 160 tests; mobile Vitest passed 8 files / 45
-  tests. Focused async backup and native durability tests passed.
-- Formatting, lint, root/mobile TypeScript, Next build, Vite build, Capacitor
-  sync, Java 21/API 36 `assembleDebug` (214 tasks), and secret scan passed.
-- APK upgraded over P07 on `emulator-5554`; one profile and worksheet migrated
-  to Preferences. Removing only WebView canonical state and relaunching restored
-  both records from Preferences.
-- Profile Grade 3→4 persisted while the old worksheet snapshot stayed Grade 3.
-- Corrupt native state showed the recovery warning, did not fall back to stale
-  WebView data, and remained preserved; the valid sandbox backup was restored.
+- Full Vitest: 34 files / 170 tests passed.
+- Formatting, lint, root/mobile TypeScript, and Next production build passed.
+- Vinext reported 9 supported, 0 partial, 0 issues; vinext build passed.
+- Cloudflare prebuilt deploy dry-run passed and made no deployment.
+- Local vinext synthetic probe passed web, no-store health, and four-prompt mock
+  response with exactly three required prompts.
+- Failover and rollback plans returned valid dry-run JSON; ambiguous-target
+  rejection is automated.
 
 ## Open issues and blockers
 
-- P02 public OpenAI launch still requires paid hosting activation, production
-  secrets/origins, custom-domain decisions, and real-AI acceptance.
-- Native OpenAI remains blocked until platform attestation is verified.
-- P09 depends on the production P02/P03/P04 runtime. P10 also requires owner Play
-  account, signing, policy, payment, and submission checkpoints.
-- P11 iOS compilation, privacy manifests, signing, upgrade, and runtime evidence
-  require macOS/Xcode. P12 remains an independent final verification gate.
+- Seven-day metadata retention is recommended but not configured or approved;
+  operator access and deletion responsibility are not proven.
+- P02 still needs Workers Paid confirmation, a production web origin/secrets,
+  and real-AI acceptance. Native OpenAI remains blocked pending attestation.
+- P09 still needs an induced live provider failure, configured/tested provider
+  budget alert, one monthly OpenAI usage reconciliation, and live mock
+  failover/rollback rehearsals.
+- P10/P11/P12 remain dependency- and owner-gated.
 
 ## Immediate next action
 
-Continue P09-P12 in dependency order without weakening attestation or
-owner-action gates.
+Independently review this branch, then merge the bounded P09 foundation while
+keeping P09 running. Resume live gates only after the owner approves the
+production telemetry and hosting boundaries.
