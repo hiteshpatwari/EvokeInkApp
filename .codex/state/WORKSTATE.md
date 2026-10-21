@@ -2,16 +2,16 @@
 
 ## Objective
 
-Build the local P09 production-operations foundation without claiming or
-performing owner-gated production OpenAI activation.
+Verify the Workers Paid mock deployment and exact production client origins
+without enabling OpenAI.
 
 ## Current status
 
-P09 is running on branch `codex/p09-operations-foundation`. Privacy-safe prompt
-events, deterministic counters, a fixed-data synthetic probe, and dry-run-first
-mock failover/rollback tooling are implemented and locally verified. P09 is not
-verified because production retention/access, provider alerts, live failure,
-usage reconciliation, and live switch/rollback evidence remain outstanding.
+Workers Paid is confirmed active. The latest `main` build is deployed in mock
+mode at `https://read-and-reflect.hiteshpatwari.workers.dev`; the exact public
+web origin and Android origin both pass synthetic probes. Worker observability,
+persistent logs, traces, and Logpush remain disabled. P02 and P09 stay
+`running` because no OpenAI secrets or real-provider acceptance exist.
 
 ## Completed work
 
@@ -56,10 +56,10 @@ usage reconciliation, and live switch/rollback evidence remain outstanding.
 
 ## Open issues and blockers
 
-- Seven-day metadata retention is recommended but not configured or approved;
-  operator access and deletion responsibility are not proven.
-- P02 still needs Workers Paid confirmation, a production web origin/secrets,
-  and real-AI acceptance. Native OpenAI remains blocked pending attestation.
+- Seven-day metadata-only retention and authorized-operator access are approved,
+  but persistent Worker logs are currently disabled.
+- P02 still needs OpenAI secrets and real-AI acceptance. Native OpenAI remains
+  blocked pending attestation.
 - P09 still needs an induced live provider failure, configured/tested provider
   budget alert, one monthly OpenAI usage reconciliation, and live mock
   failover/rollback rehearsals.
@@ -67,6 +67,7 @@ usage reconciliation, and live switch/rollback evidence remain outstanding.
 
 ## Immediate next action
 
-Independently review this branch, then merge the bounded P09 foundation while
-keeping P09 running. Resume live gates only after the owner approves the
-production telemetry and hosting boundaries.
+Keep the paid deployment mock-only while product/privacy testing continues.
+When ready for real AI, create and configure the server-side OpenAI and stable
+quota-hash secrets, approve provider retention, then run P02/P09 provider quota,
+budget, failure-signal, reconciliation, failover, and rollback acceptance.

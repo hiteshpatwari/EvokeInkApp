@@ -94,14 +94,16 @@ Provider-side project budget alerts and limits must be configured and tested by
 the owner before OpenAI mode. The application budget circuit remains an
 additional fail-closed control.
 
-Seven-day retention for privacy-minimized metadata is the recommendation, but
-retention and access controls are **not currently configured or proven**. Do
-not enable persistent collection until the owner approves retention, access,
-and deletion responsibility.
+The owner approved a seven-day maximum for privacy-minimized metadata and access
+limited to authorized Cloudflare account operators on October 21, 2026.
+Persistent Worker logs, traces, observability, and Logpush are currently
+disabled, so no persistent collection is active. Re-verify the configured
+retention before enabling any persistent destination.
 
 ## Gates before P09 can be verified
 
-- approved metadata retention and operator access boundary;
+- configured and verified seven-day metadata retention before persistent
+  collection is enabled;
 - Workers Paid confirmation, production web origin, secrets, and P02 OpenAI
   deployment acceptance;
 - an induced provider failure that produces the expected sanitized fallback

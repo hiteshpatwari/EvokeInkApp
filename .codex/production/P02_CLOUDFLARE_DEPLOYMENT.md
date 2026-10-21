@@ -8,6 +8,12 @@ paid-plan activation before the first production deployment. Until then,
 `AI_PROVIDER=mock` is the safe default and no public real-AI endpoint is
 approved.
 
+Workers Paid was confirmed active on October 21, 2026. The paid mock release is
+deployed at `https://read-and-reflect.hiteshpatwari.workers.dev` as version
+`addba605-7cc8-4bf8-8d15-6548aa1cc31c`. Its exact origin allowlist contains the
+public Workers URL and Android's `https://localhost`; both synthetic probes
+pass. The deployment declares no OpenAI secrets and remains mock-only.
+
 The Worker is `read-and-reflect`. It exports a SQLite-backed Durable Object
 named `PromptControlDurableObject`; every production prompt reservation is
 serialized through the single `global-v1` object. The application remains
@@ -154,6 +160,22 @@ forcing traffic. Record the restored version ID and rerun post-deployment
 checks. Durable Object data is not deleted by a code rollback.
 
 ## Stop conditions
+
+### Paid mock verification record
+
+On October 21, 2026, the authenticated account reported the `workers_paid`
+subscription in state `Paid` at $5 per month. The latest mock version received
+100% of traffic. Public-web and Android-origin probes passed the web, no-store
+health, and four-prompt contracts. Attacker origin returned 403 without CORS;
+unknown private fields and an invalid installation token returned 400. The home
+response included the required security headers. Failover and rollback tools
+produced dry-run plans without changing the serving deployment.
+
+Worker observability, persistent logs, traces, and Logpush were disabled. The
+approved seven-day metadata-only maximum therefore has no active persistent
+collection to configure. Mock mode intentionally does not reserve OpenAI quota
+or budget, so Durable Object low-limit rejection and provider-budget acceptance
+remain later OpenAI gates. No OpenAI or quota-hash secret was configured.
 
 Stop or return to mock mode if the paid plan is unconfirmed, the origin is not
 exact, either secret is absent, the quota hash secret is unstable, the Durable
