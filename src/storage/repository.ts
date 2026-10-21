@@ -7,10 +7,40 @@ import {
 
 const PROFILE_KEY = "read-reflect:profiles:v1";
 const SESSION_KEY = "read-reflect:sessions:v1";
-const STATE_KEY = "read-reflect:state:v2";
+export const STATE_KEY = "read-reflect:state:v2";
 const STATE_VERSION = 2 as const;
 
-type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+export type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+export type FlushableStorage = StorageLike & { flush?: () => Promise<void> };
+
+export function isValidCanonicalState(raw: string): boolean {
+  try {
+    const candidate: unknown = JSON.parse(raw);
+    if (
+      typeof candidate !== "object" ||
+      candidate === null ||
+      !("version" in candidate) ||
+      candidate.version !== STATE_VERSION ||
+      !("profiles" in candidate) ||
+      !Array.isArray(candidate.profiles) ||
+      !("sessions" in candidate) ||
+      !Array.isArray(candidate.sessions)
+    ) {
+      return false;
+    }
+    return (
+      candidate.profiles.every(
+        (value) => childProfileSchema.safeParse(value).success,
+      ) &&
+      candidate.sessions.every(
+        (value) => readingSessionSchema.safeParse(value).success,
+      )
+    );
+  } catch {
+    return false;
+  }
+}
 
 export type StorageCollection = "profiles" | "sessions";
 export type StorageDiagnostic = {
