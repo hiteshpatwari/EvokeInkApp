@@ -130,6 +130,71 @@ function jsonError(message: string, status: number) {
   return NextResponse.json({ message }, { status });
 }
 
+const CORS_METHODS = "POST, OPTIONS";
+const CORS_HEADERS = "Content-Type, X-Installation-Token";
+const ALLOWED_PREFLIGHT_HEADERS = new Set([
+  "content-type",
+  "x-installation-token",
+]);
+const NATIVE_APP_ORIGINS = new Set([
+  "https://localhost",
+  "capacitor://localhost",
+]);
+
+function withPromptCors(
+  response: Response,
+  origin: string | null,
+  allowedOrigins: string[],
+): Response {
+  response.headers.set("Vary", "Origin");
+  if (origin && allowedOrigins.includes(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+  }
+  return response;
+}
+
+export function createPromptOptionsHandler(
+  dependencies: Pick<PromptApiDependencies, "config">,
+) {
+  return function OPTIONS(request: Request): Response {
+    const origin = request.headers.get("origin");
+    const requestedMethod = request.headers
+      .get("access-control-request-method")
+      ?.toUpperCase();
+    const requestedHeaders = (
+      request.headers.get("access-control-request-headers") ?? ""
+    )
+      .split(",")
+      .map((header) => header.trim().toLowerCase())
+      .filter(Boolean);
+    const isAllowed =
+      origin !== null &&
+      dependencies.config.allowedOrigins.includes(origin) &&
+      requestedMethod === "POST" &&
+      requestedHeaders.every((header) => ALLOWED_PREFLIGHT_HEADERS.has(header));
+
+    if (!isAllowed) {
+      return withPromptCors(
+        jsonError("This cross-origin request is not allowed.", 403),
+        origin,
+        [],
+      );
+    }
+
+    return withPromptCors(
+      new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Methods": CORS_METHODS,
+          "Access-Control-Allow-Headers": CORS_HEADERS,
+        },
+      }),
+      origin,
+      dependencies.config.allowedOrigins,
+    );
+  };
+}
+
 function requestIp(request: Request): string {
   return (
     request.headers.get("cf-connecting-ip") ??
@@ -207,6 +272,9 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
         durationMs: Math.round(performance.now() - startedAt),
       });
     };
+    const origin = request.headers.get("origin");
+    const finish = (response: Response) =>
+      withPromptCors(response, origin, dependencies.config.allowedOrigins);
 
     const contentType =
       request.headers
@@ -216,19 +284,20 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
         .toLowerCase() ?? "";
     if (contentType !== "application/json") {
       record({ outcome: "rejected", category: "content_type" });
-      return jsonError("JSON is required.", 415);
+      return finish(jsonError("JSON is required.", 415));
     }
 
-    const origin = request.headers.get("origin");
     if (!origin || !dependencies.config.allowedOrigins.includes(origin)) {
       record({ outcome: "rejected", category: "origin" });
-      return jsonError("This request origin is not allowed.", 403);
+      return finish(jsonError("This request origin is not allowed.", 403));
     }
 
     const installationToken = request.headers.get("x-installation-token");
     if (!installationTokenSchema.safeParse(installationToken).success) {
       record({ outcome: "rejected", category: "identity" });
-      return jsonError("A valid installation identity is required.", 400);
+      return finish(
+        jsonError("A valid installation identity is required.", 400),
+      );
     }
 
     try {
@@ -263,9 +332,8 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
 
       if (reservation === "installation_quota" || reservation === "ip_quota") {
         record({ outcome: "rejected", category: reservation });
-        return jsonError(
-          "The monthly generation allowance has been reached.",
-          429,
+        return finish(
+          jsonError("The monthly generation allowance has been reached.", 429),
         );
       }
 
@@ -288,23 +356,21 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
         category: reservation === "budget_open" ? "budget_open" : "generated",
         provider: result.provider,
       });
-      return NextResponse.json(result);
+      return finish(NextResponse.json(result));
     } catch (error) {
       if (error instanceof BodyTooLargeError) {
         record({ outcome: "rejected", category: "body_size" });
-        return jsonError("The request is too large.", 413);
+        return finish(jsonError("The request is too large.", 413));
       }
       if (error instanceof InvalidJsonError || error instanceof ZodError) {
         record({ outcome: "rejected", category: "invalid_request" });
-        return jsonError(
-          "Please check the worksheet details and try again.",
-          400,
+        return finish(
+          jsonError("Please check the worksheet details and try again.", 400),
         );
       }
       record({ outcome: "rejected", category: "internal_error" });
-      return jsonError(
-        "Prompts could not be generated. Please try again.",
-        500,
+      return finish(
+        jsonError("Prompts could not be generated. Please try again.", 500),
       );
     }
   };
@@ -327,6 +393,14 @@ export function promptApiConfigFromEnvironment(): PromptApiConfig {
   if (providerName === "openai" && !configuredQuotaHashSecret) {
     throw new Error(
       "AI_QUOTA_HASH_SECRET is required when AI_PROVIDER=openai.",
+    );
+  }
+  if (
+    providerName === "openai" &&
+    origins.some((origin) => NATIVE_APP_ORIGINS.has(origin))
+  ) {
+    throw new Error(
+      "Native app origins require AI_PROVIDER=mock until verified device attestation is implemented.",
     );
   }
   return {

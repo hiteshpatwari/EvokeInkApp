@@ -19,8 +19,12 @@ Set non-secret bindings before building/deploying:
 
 - `AI_PROVIDER`: `mock` for the initial release; change to `openai` only after
   all real-AI gates pass.
-- `APP_ALLOWED_ORIGINS`: comma-separated exact HTTPS application origins. Do
-  not use wildcards.
+- `APP_ALLOWED_ORIGINS`: comma-separated exact application origins. Do not use
+  wildcards. Browser production origins must use HTTPS. The Capacitor origins
+  `https://localhost` (Android) and `capacitor://localhost` (iOS) may be
+  configured only while `AI_PROVIDER=mock`; startup fails closed if either is
+  combined with `AI_PROVIDER=openai`. Real-AI native access remains blocked
+  until a verified device-attestation boundary is implemented.
 - `OPENAI_MODEL`: currently `gpt-5-mini` unless an approved model is selected.
 - `OPENAI_TIMEOUT_MS`: default `15000`.
 - `OPENAI_MAX_RETRIES`: default `1`.
@@ -107,6 +111,10 @@ no-store`.
 - A valid prompt request from the exact allowed origin succeeds; a disallowed
   origin is `403`, private/unknown fields are `400`, and an invalid installation
   token is `400`.
+- An allowed-origin preflight returns `204`, reflects only that exact origin,
+  permits only `POST, OPTIONS` and `Content-Type, X-Installation-Token`, and
+  includes `Vary: Origin`. Prompt responses carry the same exact-origin and
+  `Vary` protection without credentialed CORS.
 - A low-limit concurrency probe proves the Durable Object admits exactly the
   configured number and rejects the remainder with `429`.
 - Logs contain outcome/category/timing only, never prompts, notes, book data,

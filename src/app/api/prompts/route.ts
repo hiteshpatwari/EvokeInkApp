@@ -1,5 +1,6 @@
 import {
   ConsolePromptEventSink,
+  createPromptOptionsHandler,
   createPromptPostHandler,
   InMemoryPromptControlStore,
   promptApiConfigFromEnvironment,
@@ -36,4 +37,10 @@ async function createPostHandler() {
 export async function POST(request: Request) {
   postHandlerPromise ??= createPostHandler();
   return (await postHandlerPromise)(request);
+}
+
+export function OPTIONS(request: Request) {
+  return createPromptOptionsHandler({
+    config: promptApiConfigFromEnvironment(),
+  })(request);
 }
