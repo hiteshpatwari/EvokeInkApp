@@ -12,6 +12,19 @@ function environmentText(name: string, fallback: string): string {
   return value || fallback;
 }
 
+const providerName = environmentText("AI_PROVIDER", "mock").toLowerCase();
+if (providerName !== "mock" && providerName !== "openai") {
+  throw new Error("AI_PROVIDER must be either mock or openai.");
+}
+
+const providerSecretBindings =
+  providerName === "openai"
+    ? {
+        OPENAI_API_KEY: bindings.secret(),
+        AI_QUOTA_HASH_SECRET: bindings.secret(),
+      }
+    : {};
+
 export default defineConfig({
   worker: defineWorker({
     name: workerName,
@@ -25,9 +38,8 @@ export default defineConfig({
     },
     env: {
       ASSETS: bindings.assets(),
-      OPENAI_API_KEY: bindings.secret(),
-      AI_QUOTA_HASH_SECRET: bindings.secret(),
-      AI_PROVIDER: bindings.text(environmentText("AI_PROVIDER", "mock")),
+      ...providerSecretBindings,
+      AI_PROVIDER: bindings.text(providerName),
       OPENAI_MODEL: bindings.text(
         environmentText("OPENAI_MODEL", "gpt-5-mini"),
       ),

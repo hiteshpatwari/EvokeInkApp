@@ -36,7 +36,9 @@ Set non-secret bindings before building/deploying:
   the local budget circuit.
 - `PROMPT_CONTROL_STORE`: fixed to `cloudflare` by the production config.
 
-Store these only as Cloudflare Worker secrets:
+OpenAI mode requires both values below as Cloudflare Worker secrets. Mock mode
+declares neither binding, so the initial deterministic deployment remains
+key-free and does not require placeholder secret values:
 
 - `OPENAI_API_KEY`
 - `AI_QUOTA_HASH_SECRET` (a stable, independently generated high-entropy value)
@@ -50,7 +52,11 @@ pnpm exec cf workers secrets update OPENAI_API_KEY --worker read-and-reflect
 pnpm exec cf workers secrets update AI_QUOTA_HASH_SECRET --worker read-and-reflect
 ```
 
-The quota hash secret must remain stable across deployments. Rotating it resets
+Provision both secrets before changing `AI_PROVIDER` from `mock` to `openai`.
+The Cloudflare configuration declares both bindings together in OpenAI mode, so
+a missing secret blocks that deployment. The runtime separately fails closed
+when the quota hash secret is unavailable. The quota hash secret must remain
+stable across deployments. Rotating it resets
 the effective pseudonymous quota identities and requires an incident/change
 record.
 
@@ -90,8 +96,10 @@ finding blocks release.
 pnpm exec cf deploy --prebuilt --tag production --message "P02 production release"
 ```
 
-6. Add/verify both secrets interactively. Keep `AI_PROVIDER=mock` for the first
-   public smoke test. Enabling `openai` is a separate controlled deployment.
+6. Keep `AI_PROVIDER=mock` for the first public smoke test; this deployment
+   intentionally has no provider-secret bindings. Enabling `openai` is a
+   separate controlled deployment: provision/verify both secrets first, set
+   `AI_PROVIDER=openai`, rebuild, and deploy only after all real-AI gates pass.
 
 ## Post-deployment checks
 
