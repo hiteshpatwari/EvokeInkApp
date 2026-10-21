@@ -2,18 +2,16 @@
 
 ## Objective
 
-Productionize P06: a bundled Capacitor 8 Android shell that reuses the existing
-React application, calls the hosted prompt API through an explicit HTTPS build
-configuration, remains usable through deterministic fallback, and packages no
-provider credential.
+Close the two Android usability defects found after P06 implementation before
+starting P07 native PDF sharing or P08 native persistence.
 
 ## Current status
 
-P06 is implemented and verified on branch `codex/p06-capacitor-shell`. The
-production Vite bundle, Capacitor navigation boundary, API 36 / Java 21 Android
-host, full debug APK, and emulator launch all pass. P07 native PDF sharing and
-P08 Preferences persistence remain separate ready work items and are not
-claimed by this shell.
+P06 build, security, transport, offline-launch, and device smoke checks pass on
+`main`, but P06 returned to `running` after a full emulator usability audit.
+Android system Back exits nested workflows and dialogs, and content overlaps
+the system status bar in portrait and landscape. P07 and P08 remain ready but
+must wait for these P06 repairs and independent device re-verification.
 
 ## Completed work
 
@@ -57,7 +55,10 @@ claimed by this shell.
   workspace integration and exact dependency state.
 - `.gitignore`, `.prettierignore`, `.eslintignore`: native build/generated-file
   boundaries.
-- `.codex/production/ISSUE_REGISTER.md`: P06 marked complete.
+- `.codex/production/ISSUE_REGISTER.md`: P06 returned to `running` after the
+  usability audit found two release blockers.
+- `.codex/production/P06_ANDROID_USABILITY_AUDIT.md`: observed workflows,
+  failures, and repair/verification order.
 - `.codex/state/WORKSTATE.md`: current operational state.
 
 ## Validation run
@@ -87,6 +88,11 @@ claimed by this shell.
 
 ## Open issues and blockers
 
+- P06-UX-01: Android Back exits or backgrounds the application from nested
+  screens and confirmation dialogs instead of navigating within the workflow.
+- P06-UX-02: content renders beneath Android system bars in portrait and
+  landscape because the edge-to-edge viewport does not consume safe-area
+  insets.
 - P07 must implement and verify native PDF cache/share/cleanup while preserving
   browser download and print.
 - P08 must implement authoritative atomic Preferences state and verified
@@ -98,5 +104,6 @@ claimed by this shell.
 
 ## Immediate next action
 
-Independently review P06, then merge it before starting P07 and P08 from their
-non-overlapping ownership boundaries.
+Implement and independently verify P06-UX-01 and P06-UX-02 using the repair and
+emulator matrix in `.codex/production/P06_ANDROID_USABILITY_AUDIT.md`; then
+start P07 followed by P08.
