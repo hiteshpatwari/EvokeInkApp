@@ -1,6 +1,6 @@
 # P08 authoritative native persistence
 
-Status: verified on Android on 2026-10-21.
+Status: implementation and Android acceptance complete; independent re-review pending.
 
 ## Implemented contract
 
@@ -16,7 +16,8 @@ Status: verified on Android on 2026-10-21.
 - One-time migration accepts only a fully valid, supported canonical version-2
   WebView document. It writes and byte-verifies the document before writing and
   verifying the migration marker. Empty, invalid, unsupported, and invalid-record
-  decisions are marked complete without deleting WebView data or unrelated keys.
+  legacy values remain undecided so a later valid launch can still migrate; no
+  WebView data or unrelated key is deleted.
 - Native state wins after migration, including corrupt native state. Corrupt
   native bytes remain available for diagnostics/recovery and are never silently
   replaced from WebView storage.
@@ -25,10 +26,16 @@ Status: verified on Android on 2026-10-21.
 
 ## Automated evidence
 
-- Root Vitest: 31 files / 155 tests passed. Mobile Vitest: 8 files / 40 tests
+- Root Vitest: 31 files / 160 tests passed. Mobile Vitest: 8 files / 45 tests
   passed. Focused coverage includes migration validation, native-wins behavior,
-  corruption preservation, ordered writes, mismatch rejection, verified removal,
+  corruption preservation, verified rollback, hard-disable-after-failure,
+  failure/relaunch behavior, ordered writes, mismatch rejection, verified removal,
   awaited startup, UI durability gating, browser defaults, and async backup failure.
+- A failed native mutation is rolled back to its prior native value (or removed
+  when previously absent) and that rollback is read-back verified. If rollback
+  cannot be verified, copy states only that storage must be confirmed after
+  reload. The adapter is hard-disabled until reload and queued later writes are
+  rolled back in the facade without reaching Preferences.
 - Formatting, lint, root/mobile TypeScript, Next production build, Vite mobile
   production build, and Capacitor sync passed. Sync registered App 8.0.1,
   Filesystem 8.1.5, Preferences 8.0.1, and Share 8.0.3.

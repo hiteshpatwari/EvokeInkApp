@@ -246,7 +246,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
   const persistenceFailure = () => {
     setNotice("");
     setError(
-      "Your change could not be saved safely. Reload the app to confirm your saved data before trying again.",
+      "Your change could not be saved safely. Reload the app to confirm what is stored before trying again.",
     );
   };
 

@@ -16,11 +16,14 @@ export interface PreferencesLike {
 }
 
 export class NativePersistenceError extends Error {
-  constructor() {
+  readonly rollbackVerified: boolean;
+
+  constructor(rollbackVerified = false) {
     super(
-      "Saved data could not be written safely. Your previous saved data is unchanged.",
+      "Saved data could not be written safely. Reload to confirm its state.",
     );
     this.name = "NativePersistenceError";
+    this.rollbackVerified = rollbackVerified;
   }
 }
 
@@ -42,6 +45,20 @@ async function removeAndVerify(preferences: PreferencesLike, key: string) {
   }
 }
 
+async function rollbackAndVerify(
+  preferences: PreferencesLike,
+  key: string,
+  value: string | null,
+): Promise<boolean> {
+  try {
+    if (value === null) await removeAndVerify(preferences, key);
+    else await setAndVerify(preferences, key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function createNativePersistence(
   preferences: PreferencesLike,
   webStorage: StorageLike,
@@ -56,29 +73,55 @@ export async function createNativePersistence(
     if (migration !== MIGRATION_COMPLETE) {
       const webValue = webStorage.getItem(STATE_KEY);
       if (webValue !== null && isValidCanonicalState(webValue)) {
-        await setAndVerify(preferences, STATE_KEY, webValue);
-        values.set(STATE_KEY, webValue);
+        try {
+          await setAndVerify(preferences, STATE_KEY, webValue);
+          await setAndVerify(preferences, MIGRATION_KEY, MIGRATION_COMPLETE);
+          values.set(STATE_KEY, webValue);
+        } catch {
+          const stateRolledBack = await rollbackAndVerify(
+            preferences,
+            STATE_KEY,
+            null,
+          );
+          const markerRolledBack = await rollbackAndVerify(
+            preferences,
+            MIGRATION_KEY,
+            null,
+          );
+          throw new NativePersistenceError(stateRolledBack && markerRolledBack);
+        }
       }
-      await setAndVerify(preferences, MIGRATION_KEY, MIGRATION_COMPLETE);
     }
   }
 
-  let queue = Promise.resolve();
+  let queue: Promise<void> = Promise.resolve();
   let failure: NativePersistenceError | null = null;
   let durableValue = values.get(STATE_KEY) ?? null;
 
   const enqueue = (operation: () => Promise<void>) => {
-    queue = queue.then(async () => {
-      if (failure) throw failure;
-      try {
-        await operation();
-      } catch {
-        failure = new NativePersistenceError();
-        if (durableValue === null) values.delete(STATE_KEY);
-        else values.set(STATE_KEY, durableValue);
-        throw failure;
-      }
-    });
+    queue = queue
+      .catch(() => undefined)
+      .then(async () => {
+        if (failure) {
+          if (durableValue === null) values.delete(STATE_KEY);
+          else values.set(STATE_KEY, durableValue);
+          throw failure;
+        }
+        const previousDurableValue = durableValue;
+        try {
+          await operation();
+        } catch {
+          const rollbackVerified = await rollbackAndVerify(
+            preferences,
+            STATE_KEY,
+            previousDurableValue,
+          );
+          failure = new NativePersistenceError(rollbackVerified);
+          if (durableValue === null) values.delete(STATE_KEY);
+          else values.set(STATE_KEY, durableValue);
+          throw failure;
+        }
+      });
     // The rejection remains observable through flush without becoming an
     // unhandled promise rejection before the UI awaits the durability gate.
     void queue.catch(() => undefined);
