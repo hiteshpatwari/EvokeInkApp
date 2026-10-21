@@ -12,4 +12,13 @@ describe("production Capacitor navigation boundary", () => {
     expect(capacitorConfig.server).not.toHaveProperty("allowNavigation");
     expect(capacitorConfig.server).not.toHaveProperty("cleartext");
   });
+
+  it("enables Capacitor 8 system-bar inset handling for API 36", () => {
+    expect(capacitorConfig.plugins?.["SystemBars"]).toEqual({
+      insetsHandling: "css",
+      initialViewportFitValueHint: "cover",
+      style: "LIGHT",
+      hidden: false,
+    });
+  });
 });

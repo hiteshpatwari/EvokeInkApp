@@ -2,8 +2,12 @@
 
 ## Decision
 
-P06 is functionally complete but is not usability-verified for release. Two
-Android defects must be fixed before P07 and P08 implementation begins:
+The two Android UX defects found by this audit are repaired and independently
+code-reviewed. P06 remains `running`, rather than `verified`, while the
+separately identified notes-specific fallback grounding gaps are repaired and
+device-verified. P07 and P08 must not begin before that remaining P06 work.
+
+The original release blockers were:
 
 1. Android system Back exits or backgrounds the application from nested screens
    and confirmation dialogs instead of returning through the workflow.
@@ -64,6 +68,19 @@ Required fix:
 - Allow application exit or backgrounding only from Home.
 - Add unit tests for every transition and repeat the emulator scenarios.
 
+Resolution evidence (October 20, 2026):
+
+- Added the exact `@capacitor/app@8.0.1` plugin and a cancellable native Back
+  event shared by the Capacitor host and React shell.
+- Back now dismisses session/profile deletion dialogs first, then follows
+  `preview → review → create → home` and `profile/saved → home`. Home alone
+  leaves the event unconsumed so Android can exit/background the application.
+- Transition, host-listener, component-dialog, and AppShell integration tests
+  pass.
+- On `emulator-5554`, Back from Create returned to Home and Back from the
+  profile-deletion dialog dismissed the dialog while the activity remained the
+  top resumed activity.
+
 ### P06-UX-02: content overlaps Android system bars
 
 Severity: high.
@@ -87,6 +104,23 @@ Required fix:
 - Verify Home, create, review, preview, saved worksheets, and dialogs in
   portrait and landscape, while scrolled and with the keyboard open.
 - Repeat at font scales 1.0, 1.3, and 2.0.
+
+Resolution evidence (October 20, 2026):
+
+- Enabled AndroidX edge-to-edge after Capacitor bridge creation and configured
+  Capacitor SystemBars CSS inset handling with a light system-bar style.
+- Applied all four safe-area insets to shell/header/page/preview/dialog regions,
+  used dynamic viewport units, and kept the native header sticky while content
+  scrolls.
+- Native narrow layouts stack the navigation and hide its redundant logo/Home
+  control. This removed status-bar collisions and text clipping at Android font
+  scale 2.0 without viewport-capping normal navigation text.
+- Portrait and landscape checks passed at font scale 2.0; labels remained
+  complete, scrollable content remained reachable, and no horizontal clipping
+  was observed. Normal-scale keyboard-open testing kept the focused Book title
+  field visible and `dumpsys input_method` reported both input-view flags true.
+- Safe-area, large-text reflow, SystemBars configuration, and Android host
+  ordering have focused regression tests.
 
 ## P07 and P08 observations
 
@@ -112,17 +146,13 @@ These are expected missing capabilities, not new P06 regressions:
 - Run a manual TalkBack pass. UIAutomator did not expose enough WebView DOM
   detail to claim screen-reader verification.
 
-## Repair and verification order
+## Remaining verification order
 
-1. Fix Android Back navigation and add transition tests.
-2. Fix safe-area and dynamic-viewport behavior.
-3. Run focused unit and component tests plus the full repository checks.
-4. Rebuild and install the API 36 debug APK.
-5. Repeat the emulator matrix for Back, dialogs, portrait, landscape, scrolling,
-   keyboard-open, and font scales 1.0, 1.3, and 2.0.
-6. Mark P06 verified again only after an independent agent reviews the code and
-   repeats the two failing emulator scenarios.
-7. Start P07, then P08.
+1. Repair and test the separately tracked notes-specific fallback grounding
+   gaps.
+2. Repeat device acceptance for those notes scenarios.
+3. Mark P06 verified only after all P06 gates pass together.
+4. Start P07, then P08.
 
 The emulator was restored after the audit to automatic rotation, font scale
 1.0, and enabled Wi-Fi/mobile data.
