@@ -14,13 +14,18 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint --deny-warnings .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm mobile:typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:vinext": "vite dev --port 3001",
     "build:vinext": "vite build",
     "start:vinext": "vite preview",
-    "deploy:vinext": "vinext-cloudflare deploy"
+    "deploy:vinext": "vinext-cloudflare deploy",
+    "mobile:test": "pnpm --filter @read-and-reflect/mobile test",
+    "mobile:typecheck": "pnpm --filter @read-and-reflect/mobile typecheck",
+    "mobile:build": "pnpm --filter @read-and-reflect/mobile build",
+    "mobile:sync": "pnpm --filter @read-and-reflect/mobile cap:sync",
+    "mobile:secrets": "pnpm --filter @read-and-reflect/mobile secrets:check"
   },
   "dependencies": {
     "@hookform/resolvers": "5.2.2",
@@ -55,7 +60,8 @@
   },
   "pnpm": {
     "overrides": {
-      "fflate@0.7.3": "0.7.5"
+      "fflate@0.7.3": "0.7.5",
+      "xcode@3.0.1>uuid": "11.1.1"
     }
   },
   "packageManager": "pnpm@10.11.1"
