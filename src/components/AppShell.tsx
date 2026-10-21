@@ -33,6 +33,7 @@ import {
 } from "@/domain/schemas";
 import {
   createLocalRepository,
+  type FlushableStorage,
   type StorageDiagnostic,
 } from "@/storage/repository";
 import {
@@ -90,7 +91,9 @@ const emptyCreation: CreationState = {
   skills: ["evidence_and_explanation", "inference"],
 };
 
-export function AppShell() {
+type AppShellProps = { storage?: FlushableStorage };
+
+export function AppShell({ storage }: AppShellProps = {}) {
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<AppScreen>("home");
   const [profiles, setProfiles] = useState<ChildProfile[]>([]);
@@ -136,7 +139,7 @@ export function AppShell() {
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
-      const repository = createLocalRepository(localStorage);
+      const repository = createLocalRepository(storage ?? localStorage);
       const loadedProfiles = repository.loadProfiles();
       setProfiles(loadedProfiles);
       setSessions(repository.loadSessions());
@@ -147,7 +150,7 @@ export function AppShell() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [storage]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -235,9 +238,17 @@ export function AppShell() {
     () =>
       typeof window === "undefined"
         ? null
-        : createLocalRepository(localStorage),
-    [],
+        : createLocalRepository(storage ?? localStorage),
+    [storage],
   );
+
+  const flushPersistence = async () => storage?.flush?.();
+  const persistenceFailure = () => {
+    setNotice("");
+    setError(
+      "Your change could not be saved safely. Reload the app to confirm what is stored before trying again.",
+    );
+  };
 
   const goHome = () => {
     setScreen("home");
@@ -258,16 +269,21 @@ export function AppShell() {
     setScreen("create");
   };
 
-  const cleanUpSavedData = () => {
+  const cleanUpSavedData = async () => {
     if (!repository) return;
-    const removed = repository.clearInvalidPersistedRecords();
-    setStorageDiagnostics([]);
-    setNotice(
-      `Saved data cleaned up. ${removed.profiles} invalid ${removed.profiles === 1 ? "child profile" : "child profiles"} and ${removed.sessions} invalid ${removed.sessions === 1 ? "worksheet" : "worksheets"} were removed.`,
-    );
+    try {
+      const removed = repository.clearInvalidPersistedRecords();
+      await flushPersistence();
+      setStorageDiagnostics([]);
+      setNotice(
+        `Saved data cleaned up. ${removed.profiles} invalid ${removed.profiles === 1 ? "child profile" : "child profiles"} and ${removed.sessions} invalid ${removed.sessions === 1 ? "worksheet" : "worksheets"} were removed.`,
+      );
+    } catch {
+      persistenceFailure();
+    }
   };
 
-  const saveProfile = (event: FormEvent<HTMLFormElement>) => {
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const timestamp = now();
@@ -293,7 +309,13 @@ export function AppShell() {
       );
       return;
     }
-    repository?.saveProfile(result.data);
+    try {
+      repository?.saveProfile(result.data);
+      await flushPersistence();
+    } catch {
+      persistenceFailure();
+      return;
+    }
     setProfiles((current) => [
       ...current.filter((profile) => profile.id !== result.data.id),
       result.data,
@@ -462,7 +484,7 @@ export function AppShell() {
     }
   };
 
-  const saveWorkingSession = (nextScreen: AppScreen = "preview") => {
+  const saveWorkingSession = async (nextScreen: AppScreen = "preview") => {
     if (!workingSession) return;
     const candidate = {
       ...workingSession,
@@ -479,7 +501,13 @@ export function AppShell() {
       return;
     }
     const saved = result.data;
-    repository?.saveSession(saved);
+    try {
+      repository?.saveSession(saved);
+      await flushPersistence();
+    } catch {
+      persistenceFailure();
+      return;
+    }
     setWorkingSession(saved);
     setSessions((current) => [
       saved,
@@ -555,7 +583,7 @@ export function AppShell() {
     setScreen(target);
   };
 
-  const duplicateSession = (session: ReadingSession) => {
+  const duplicateSession = async (session: ReadingSession) => {
     const duplicate = {
       ...session,
       id: id("session"),
@@ -571,7 +599,13 @@ export function AppShell() {
       updatedAt: now(),
       status: "draft" as const,
     };
-    repository?.saveSession(duplicate);
+    try {
+      repository?.saveSession(duplicate);
+      await flushPersistence();
+    } catch {
+      persistenceFailure();
+      return;
+    }
     setSessions((current) => [duplicate, ...current]);
     setNotice("A copy was added to saved reflections.");
   };
@@ -590,9 +624,15 @@ export function AppShell() {
     queueMicrotask(() => trigger?.focus());
   };
 
-  const deleteSession = () => {
+  const deleteSession = async () => {
     if (!pendingDeleteSessionId) return;
-    repository?.deleteSession(pendingDeleteSessionId);
+    try {
+      repository?.deleteSession(pendingDeleteSessionId);
+      await flushPersistence();
+    } catch {
+      persistenceFailure();
+      return;
+    }
     document.querySelector<HTMLElement>("main")?.focus();
     setSessions((current) =>
       current.filter((session) => session.id !== pendingDeleteSessionId),
@@ -615,7 +655,7 @@ export function AppShell() {
     queueMicrotask(() => trigger?.focus());
   };
 
-  const deleteProfile = () => {
+  const deleteProfile = async () => {
     const profile = profiles.find(
       (candidate) => candidate.id === pendingDeleteProfileId,
     );
@@ -628,7 +668,13 @@ export function AppShell() {
       (session) => session.childId === profile.id,
     ).length;
 
-    repository?.deleteProfile(profile.id);
+    try {
+      repository?.deleteProfile(profile.id);
+      await flushPersistence();
+    } catch {
+      persistenceFailure();
+      return;
+    }
     setProfiles(remainingProfiles);
     if (selectedChildId === profile.id) {
       setSelectedChildId(remainingProfiles[0]?.id ?? "");
@@ -643,12 +689,18 @@ export function AppShell() {
     document.querySelector<HTMLElement>("main")?.focus();
   };
 
-  const updateSessionStatus = (
+  const updateSessionStatus = async (
     session: ReadingSession,
     status: ReadingSession["status"],
   ) => {
     const updated = { ...session, status, updatedAt: now() };
-    repository?.saveSession(updated);
+    try {
+      repository?.saveSession(updated);
+      await flushPersistence();
+    } catch {
+      persistenceFailure();
+      return;
+    }
     setSessions((current) =>
       current.map((item) => (item.id === updated.id ? updated : item)),
     );
@@ -660,7 +712,7 @@ export function AppShell() {
     );
   };
 
-  const importBackupData = (data: {
+  const importBackupData = async (data: {
     profiles: ChildProfile[];
     sessions: ReadingSession[];
   }) => {
@@ -669,6 +721,7 @@ export function AppShell() {
     }
 
     repository.replaceAllData(data);
+    await flushPersistence();
     setProfiles(data.profiles);
     setSessions(data.sessions);
     setSelectedChildId((current) =>

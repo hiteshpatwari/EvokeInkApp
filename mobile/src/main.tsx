@@ -6,6 +6,8 @@ import { createMobilePromptFetch } from "./promptTransport";
 import { installNativeBackHandler } from "./nativeBack";
 import { installWorksheetExporter } from "@/pdf/worksheetExport";
 import { nativeWorksheetExporter } from "./nativeWorksheetExport";
+import { createMobilePersistence } from "./nativePersistence";
+import { bootstrapMobileApplication } from "./bootstrap";
 import "../../src/app/globals.css";
 
 declare const __PROMPT_API_URL__: string;
@@ -19,11 +21,24 @@ document.documentElement.dataset["nativeApp"] = "true";
 installWorksheetExporter(nativeWorksheetExporter);
 void installNativeBackHandler(App, window);
 
-const root = document.getElementById("root");
-if (!root) throw new Error("Mobile application root is missing");
+export async function startMobileApplication() {
+  const root = document.getElementById("root");
+  if (!root) throw new Error("Mobile application root is missing");
+  await bootstrapMobileApplication(
+    () => createMobilePersistence(window.localStorage),
+    (storage) =>
+      createRoot(root).render(
+        <StrictMode>
+          <AppShell storage={storage} />
+        </StrictMode>,
+      ),
+  );
+}
 
-createRoot(root).render(
-  <StrictMode>
-    <AppShell />
-  </StrictMode>,
-);
+void startMobileApplication().catch(() => {
+  const root = document.getElementById("root");
+  if (root) {
+    root.textContent =
+      "Saved data could not be opened safely. Close and reopen the app. Your existing data has not been overwritten.";
+  }
+});

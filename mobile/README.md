@@ -20,6 +20,7 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 ```
 
 The generated Android project pins `compileSdk` and `targetSdk` to API 36 and
-Java source/target compatibility to 21. P07 will replace browser PDF download
-with the native share adapter. P08 will replace WebView `localStorage` with the
-atomic Preferences adapter; neither capability is claimed by this shell.
+Java source/target compatibility to 21. Android worksheet export uses the
+private-cache native share adapter. Canonical application state uses Capacitor
+Preferences with verified one-time WebView migration and read-after-write
+durability; browser builds continue to use `localStorage`.

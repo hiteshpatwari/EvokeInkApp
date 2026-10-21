@@ -2,18 +2,32 @@
 
 ## Objective
 
-Complete the production mobile path after P06: P07 native PDF sharing is now
-verified; P08 authoritative native persistence and migration is next.
+Complete the production mobile path after P06. P07 native PDF sharing and P08
+authoritative native persistence are now implemented and verified on Android.
 
 ## Current status
 
-P07 is implemented and verified on branch `codex/p07-native-pdf`. Browser users
-retain Print and Download PDF. The Android client presents a truthful Share PDF
-action backed by official Capacitor Filesystem and Share plugins, keeps the PDF
-in application-private cache only for the chooser operation, and attempts
-cleanup for success, cancellation, and failure.
+P08 is verified on branch `codex/p08-native-persistence`; independent re-review
+approved the transactional rollback, queue recovery, migration-marker, UI-copy,
+automated, build, and Android acceptance evidence. The Android client awaits an
+official Capacitor Preferences adapter before React renders, migrates only valid
+canonical WebView state once, treats native state as authoritative, and verifies
+queued writes/removals before the UI reports success. Browser storage and the
+verified P06/P07 paths remain intact.
 
 ## Completed work
+
+- Added exact `@capacitor/preferences@8.0.1` and a dependency-injected native
+  adapter that stores one canonical v2 document, serializes mutations, verifies
+  read-after-write/removal, and exposes `flush()` as the durability gate.
+- Added non-destructive one-time migration with exact state and marker
+  verification. Invalid, unsupported, and empty legacy values remain eligible
+  for a later valid migration; corrupt native data is never replaced from
+  WebView.
+- AppShell now awaits native flush before changing visible persisted state or
+  showing success. Browser defaults, backup merge/replace, corruption recovery,
+  immutable child snapshots, prompt generation, and PDF sharing are preserved.
+- Recorded P08 proof in `.codex/production/P08_NATIVE_PERSISTENCE.md`.
 
 - Added a host-neutral worksheet-export boundary. The browser default retains
   existing jsPDF download behavior and reports that browser Print is available.
@@ -37,47 +51,36 @@ cleanup for success, cancellation, and failure.
 
 ## Files or areas changed
 
-- `src/pdf/worksheetExport.ts` and focused browser/host-boundary tests.
-- `src/components/AppShell.tsx` and focused PDF export UI tests.
-- `mobile/src/nativeWorksheetExport.ts`, its focused tests, and mobile bootstrap.
-- `mobile/package.json`, `pnpm-lock.yaml`, and synchronized Android plugin Gradle
-  files.
-- P07 production evidence, issue register, and this workstate.
+- `src/storage/repository.ts`, `src/components/AppShell.tsx`,
+  `src/components/DataBackupPanel.tsx`, and focused tests.
+- `mobile/src/nativePersistence.ts`, awaited bootstrap, focused tests, exact
+  dependency, lockfile, and synchronized Android plugin Gradle files.
+- P08 production evidence, mobile README, issue register, and this workstate.
 
 ## Validation evidence
 
-- TDD RED failed because the native export module did not exist; GREEN passes.
-- Root Vitest: 28 files / 142 tests passed.
-- Mobile Vitest: 6 files / 30 tests passed.
-- Root/mobile TypeScript, lint, formatting, Next build, mobile Vite production
-  build, Capacitor sync, and artifact secret scan passed.
-- Java 21 / Android API 36 Gradle `assembleDebug` passed with 184 tasks executed.
-- APK install on `emulator-5554` returned Success. The installed saved worksheet
-  preview showed Share PDF and no browser-only Print control.
-- Android ChooserActivity opened with a content URI. The sanitized PDF existed
-  in private cache while the chooser was open; Android Back cancelled sharing,
-  the app reported cancellation, and the temporary PDF was removed.
-- A verifier-found sticky-header hit-target overlap was repaired by focusing new
-  screens with `preventScroll` and then resetting the document scroll root. A
-  normal portrait/font-1.0 tap opened Share instead of Home; portrait bounds had
-  a 97 CSS-pixel header-to-button gap. Landscape/font-2.0 bounds also had no
-  overlap, and focused regression coverage passes.
-- APK permissions contain INTERNET and the application-scoped dynamic-receiver
-  permission only; no broad storage permission was added.
-- `pnpm audit --audit-level=moderate` continues to report only the documented
-  unpatched vinext-only `braces@3.0.3` exception.
+- Root Vitest passed 31 files / 160 tests; mobile Vitest passed 8 files / 45
+  tests. Focused async backup and native durability tests passed.
+- Formatting, lint, root/mobile TypeScript, Next build, Vite build, Capacitor
+  sync, Java 21/API 36 `assembleDebug` (214 tasks), and secret scan passed.
+- APK upgraded over P07 on `emulator-5554`; one profile and worksheet migrated
+  to Preferences. Removing only WebView canonical state and relaunching restored
+  both records from Preferences.
+- Profile Grade 3→4 persisted while the old worksheet snapshot stayed Grade 3.
+- Corrupt native state showed the recovery warning, did not fall back to stale
+  WebView data, and remained preserved; the valid sandbox backup was restored.
 
 ## Open issues and blockers
 
-- P08 must implement authoritative atomic Preferences state, startup hydration,
-  and verified one-time WebView localStorage migration with recovery tests.
 - P02 public OpenAI launch still requires paid hosting activation, production
   secrets/origins, custom-domain decisions, and real-AI acceptance.
 - Native OpenAI remains blocked until platform attestation is verified.
-- iOS compilation, Filesystem privacy-manifest validation, sharing acceptance,
-  signing, and release evidence require macOS/Xcode under P11.
+- P09 depends on the production P02/P03/P04 runtime. P10 also requires owner Play
+  account, signing, policy, payment, and submission checkpoints.
+- P11 iOS compilation, privacy manifests, signing, upgrade, and runtime evidence
+  require macOS/Xcode. P12 remains an independent final verification gate.
 
 ## Immediate next action
 
-Independently review P07, then start P08 mobile persistence and migration without
-changing the verified PDF export boundary.
+Continue P09-P12 in dependency order without weakening attestation or
+owner-action gates.

@@ -37,7 +37,7 @@ type DataBackupPanelProps = {
   onImport: (data: {
     profiles: ChildProfile[];
     sessions: ReadingSession[];
-  }) => void;
+  }) => Promise<void> | void;
 };
 
 export function DataBackupPanel({
@@ -164,11 +164,11 @@ export function DataBackupPanel({
     }
   };
 
-  const applyImport = (mode: BackupImportMode) => {
+  const applyImport = async (mode: BackupImportMode) => {
     if (!candidate) return;
     const result = resolveBackupImport({ profiles, sessions }, candidate, mode);
     try {
-      onImport(result);
+      await onImport(result);
       setCandidate(null);
       setReplacePending(false);
       setError("");

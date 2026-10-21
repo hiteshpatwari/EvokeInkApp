@@ -138,7 +138,7 @@ describe("DataBackupPanel", () => {
 
   it("keeps the candidate available and reports a failed save", async () => {
     const user = userEvent.setup();
-    const onImport = vi.fn(() => {
+    const onImport = vi.fn(async () => {
       throw new Error("Storage is unavailable");
     });
     render(<DataBackupPanel profiles={[]} sessions={[]} onImport={onImport} />);
