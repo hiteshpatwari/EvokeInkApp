@@ -33,3 +33,6 @@ DerivedData/
 *.cer
 *.pem
 *.key
+/dist/
+.vinext/
+.cloudflare/
