@@ -7,11 +7,12 @@ authoritative native persistence are now implemented and verified on Android.
 
 ## Current status
 
-P08 is verified on branch `codex/p08-native-persistence`. The Android client
-awaits an official Capacitor Preferences adapter before React renders, migrates
-only valid canonical WebView state once, treats native state as authoritative,
-and verifies queued writes/removals before the UI reports success. Browser
-storage and the verified P06/P07 paths remain intact.
+P08 implementation and Android acceptance are complete on branch
+`codex/p08-native-persistence`; independent repair re-review is pending. The
+Android client awaits an official Capacitor Preferences adapter before React
+renders, migrates only valid canonical WebView state once, treats native state
+as authoritative, and verifies queued writes/removals before the UI reports
+success. Browser storage and the verified P06/P07 paths remain intact.
 
 ## Completed work
 
@@ -19,8 +20,9 @@ storage and the verified P06/P07 paths remain intact.
   adapter that stores one canonical v2 document, serializes mutations, verifies
   read-after-write/removal, and exposes `flush()` as the durability gate.
 - Added non-destructive one-time migration with exact state and marker
-  verification. Invalid, unsupported, empty, already-migrated, and corrupt-native
-  paths are fail-safe; native data is never silently replaced from WebView.
+  verification. Invalid, unsupported, and empty legacy values remain eligible
+  for a later valid migration; corrupt native data is never replaced from
+  WebView.
 - AppShell now awaits native flush before changing visible persisted state or
   showing success. Browser defaults, backup merge/replace, corruption recovery,
   immutable child snapshots, prompt generation, and PDF sharing are preserved.
@@ -56,7 +58,7 @@ storage and the verified P06/P07 paths remain intact.
 
 ## Validation evidence
 
-- Root Vitest passed 31 files / 155 tests; mobile Vitest passed 8 files / 40
+- Root Vitest passed 31 files / 160 tests; mobile Vitest passed 8 files / 45
   tests. Focused async backup and native durability tests passed.
 - Formatting, lint, root/mobile TypeScript, Next build, Vite build, Capacitor
   sync, Java 21/API 36 `assembleDebug` (214 tasks), and secret scan passed.
