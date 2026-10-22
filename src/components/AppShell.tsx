@@ -16,6 +16,7 @@ import type {
   PromptBatch,
   ReadingSession,
   ResponseLength,
+  WorksheetPrompt,
 } from "@/domain/schemas";
 import {
   getInstallationToken,
@@ -42,6 +43,7 @@ import {
 } from "@/pdf/worksheetExport";
 import { DataBackupPanel } from "./DataBackupPanel";
 import { PromptEditor } from "./PromptEditor";
+import { ResponseReview } from "./ResponseReview";
 import { WorksheetPreview } from "./WorksheetPreview";
 
 const DIFFICULTIES: Array<{ value: Difficulty; label: string }> = [
@@ -109,6 +111,8 @@ export function AppShell({ storage }: AppShellProps = {}) {
   const [workingSession, setWorkingSession] = useState<ReadingSession | null>(
     null,
   );
+  const [responseReviewPrompt, setResponseReviewPrompt] =
+    useState<WorksheetPrompt | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [storageDiagnostics, setStorageDiagnostics] = useState<
@@ -252,6 +256,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
 
   const goHome = () => {
     setScreen("home");
+    setResponseReviewPrompt(null);
     setPendingDeleteSessionId(null);
     setPendingDeleteProfileId(null);
     setError("");
@@ -760,6 +765,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
       event.preventDefault();
       setError("");
       setNotice("");
+      if (screen === "response") setResponseReviewPrompt(null);
       setScreen(previousScreen);
     };
 
@@ -1544,8 +1550,27 @@ export function AppShell({ storage }: AppShellProps = {}) {
               </button>
             </div>
           </div>
-          <WorksheetPreview session={workingSession} />
+          <WorksheetPreview
+            session={workingSession}
+            onReviewResponse={(prompt) => {
+              setResponseReviewPrompt(prompt);
+              setError("");
+              setNotice("");
+              setScreen("response");
+            }}
+          />
         </main>
+      )}
+
+      {screen === "response" && workingSession && responseReviewPrompt && (
+        <ResponseReview
+          childSnapshot={workingSession.childSnapshot}
+          prompt={responseReviewPrompt}
+          onDone={() => {
+            setResponseReviewPrompt(null);
+            setScreen("preview");
+          }}
+        />
       )}
 
       {screen === "saved" && (

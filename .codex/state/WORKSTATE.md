@@ -2,75 +2,77 @@
 
 ## Objective
 
-Verify the Workers Paid mock deployment and exact production client origins
-without enabling OpenAI.
+Deliver the first safe vertical slice of student response coaching: one typed
+response for one saved worksheet prompt, with deterministic constructive mock
+feedback and no persistence.
 
 ## Current status
 
-Workers Paid is confirmed active. The latest `main` build is deployed in mock
-mode at `https://read-and-reflect.hiteshpatwari.workers.dev`; the exact public
-web origin and Android origin both pass synthetic probes. Worker observability,
-persistent logs, traces, and Logpush remain disabled. P02 and P09 stay
-`running` because no OpenAI secrets or real-provider acceptance exist.
+Response-coaching Phase 1 is implemented and independently reviewed. The web
+and Capacitor clients can review a typed response against its selected prompt.
+Feedback is deterministic, strength-first, schema validated, explicitly
+limited, and discarded when the flow closes. The capability remains mock-only;
+photo/OCR and live provider processing are intentionally not enabled.
 
 ## Completed work
 
-- Fixed the reading-progress validation/UI mismatch: concise ranges such as
-  `1-60` and completion values `full`, `complete`, and `completed` are accepted;
-  ambiguous values such as `1` remain rejected. Focused and full tests pass.
-- Added a validated operational-event boundary containing only a generated
-  request ID, minute timestamp, bounded latency/status/provider/fallback/error,
-  rate-limit decision, optional bounded token/cost fields, and a short HMAC
-  prefix only for quota-denial correlation.
-- Unknown/private inputs are stripped before emission. Synchronous sink throws
-  and asynchronous sink rejections are contained immediately, do not create
-  unhandled rejections, and do not affect the user response.
-- Added zero-cost console and deterministic in-memory sinks plus aggregation for
-  availability, HTTP errors, fallback, quota denial, latency, estimated cost,
-  provider, and normalized error counters.
-- Instrumented all prompt POST outcomes at the route/control boundary and set
-  prompt responses to `Cache-Control: no-store`.
-- Added a non-personal synthetic web/health/mock-prompt probe that reports only
-  bounded machine-readable failure categories.
-- Added exact-target, dry-run-first PowerShell tools for mock failover and
-  verified-version rollback. Execution requires an explicit switch and
-  PowerShell confirmation, followed by the synthetic probe.
-- Added the P09 runbook and local evidence record; marked P09 `running`.
+- Added strict response-feedback request and result schemas. The request carries
+  only the selected prompt, bounded typed response, and reading profile fields;
+  names, local IDs, book metadata, summaries, and parent notes are excluded.
+- Added a provider-neutral feedback interface and deterministic mock provider.
+  The mock makes only observable structural claims and always states that it
+  cannot verify prompt alignment or book facts.
+- Added `/api/feedback` with exact-origin CORS, UUID installation token checks,
+  bounded request bodies, `no-store`, content-free operational events, and a
+  feedback-specific quota/budget category and Durable Object namespace.
+- Added the saved-worksheet response-review flow with explicit prompt context,
+  validation, loading/retry states, strength-first coaching, keyboard/focus
+  behavior, and native Back cleanup. Drafts survive recoverable request errors;
+  closing the flow does not mutate canonical storage.
+- Added Capacitor feedback transport. It derives the sibling HTTPS feedback
+  route from the configured prompt endpoint, validates hosted responses, and
+  falls back locally to deterministic feedback when offline or invalid.
+- Fixed the React StrictMode lifecycle guard and independently re-reviewed both
+  UI/mobile corrections with no remaining must-fix findings.
+- Completed a real Playwright flow at desktop and 375x812: generated and saved a
+  worksheet, opened the correct response review, submitted a typed response,
+  and observed the full coaching result without application console errors.
 
 ## Files or areas changed
 
-- `src/server/promptOperations.ts`, prompt route controls, synthetic probe, and
-  focused tests.
-- `scripts/Invoke-SyntheticProbe.ps1`, `Invoke-MockFailover.ps1`, and
-  `Invoke-WorkerRollback.ps1`.
-- P09 issue status, runbook/evidence, package scripts, and this workstate.
+- `src/domain/answerFeedback*` and focused schema/mock tests.
+- `src/server/*AnswerFeedback*`, `src/app/api/feedback/`, and route/control tests.
+- `src/components/ResponseReview.tsx`, worksheet/AppShell/native Back integration,
+  responsive styles, and React integration tests.
+- `mobile/src/promptTransport.ts` and transport tests.
+- Response-coaching UI Spec, Design Doc, and Work Plan under `docs/`.
 
 ## Validation evidence
 
-- Full Vitest: 34 files / 172 tests passed, including route-level response/CORS
-  equivalence and unhandled-rejection guards for an asynchronously failing sink.
-- Formatting, lint, root/mobile TypeScript, and Next production build passed.
-- Vinext reported 9 supported, 0 partial, 0 issues; vinext build passed.
-- Cloudflare prebuilt deploy dry-run passed and made no deployment.
-- Local vinext synthetic probe passed web, no-store health, and four-prompt mock
-  response with exactly three required prompts.
-- Failover and rollback plans returned valid dry-run JSON; ambiguous-target
-  rejection is automated.
+- Full Vitest: 41 files / 247 tests passed.
+- Root and mobile TypeScript passed; oxlint passed with no warnings; scoped
+  Prettier check and `git diff --check` passed.
+- Next production build passed after the required security-nudge retry and lists
+  `/api/feedback` as dynamic. Vinext/Cloudflare production build passed.
+- Mobile production build against the public Worker passed; production bundle
+  secret scan passed. Existing >500 kB chunk warnings remain non-blocking.
+- Independent domain, API, and UI/mobile reviews all passed after fixes.
 
 ## Open issues and blockers
 
-- Seven-day metadata-only retention and authorized-operator access are approved,
-  but persistent Worker logs are currently disabled.
-- P02 still needs OpenAI secrets and real-AI acceptance. Native OpenAI remains
-  blocked pending attestation.
-- P09 still needs an induced live provider failure, configured/tested provider
-  budget alert, one monthly OpenAI usage reconciliation, and live mock
-  failover/rollback rehearsals.
-- P10/P11/P12 remain dependency- and owner-gated.
+- Next.js 16.4.0 reports a known security vulnerability and recommends the
+  repository's guided security upgrade.
+- Phase 2 photo capture/transcript confirmation and bounded local image cleanup
+  are not implemented.
+- Live transcription/feedback adapters remain disabled pending privacy/store
+  approval, retention review, budget controls, controlled web acceptance, and
+  native device attestation.
+- This phase has not been deployed to the public Worker or installed on a
+  physical Android device in this turn.
 
 ## Immediate next action
 
-Keep the paid deployment mock-only while product/privacy testing continues.
-When ready for real AI, create and configure the server-side OpenAI and stable
-quota-hash secrets, approve provider retention, then run P02/P09 provider quota,
-budget, failure-signal, reconciliation, failover, and rollback acceptance.
+Commit Phase 1, then choose whether to run the Next.js security upgrade before
+deploying the mock-only response-coaching slice. After device acceptance, begin
+Phase 2 with a fixture-driven photo/transcript state machine; do not send images
+or child-authored text to a live provider until the external release gates pass.

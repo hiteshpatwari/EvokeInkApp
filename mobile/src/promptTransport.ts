@@ -1,12 +1,29 @@
 import { MockPromptGenerator } from "../../src/domain/mockPromptGenerator";
+import { MockAnswerFeedbackProvider } from "../../src/domain/mockAnswerFeedbackProvider";
+import {
+  answerFeedbackInputSchema,
+  answerFeedbackSchema,
+} from "../../src/domain/answerFeedbackSchemas";
 import {
   networkGenerationInputSchema,
   promptBatchSchema,
 } from "../../src/domain/schemas";
+import { z } from "zod";
 
 const GENERAL_FALLBACK_NOTICE = "Offline mode used reliable general prompts.";
 const NOTES_FALLBACK_NOTICE =
   "Offline mode used your supplied summary and notes on this device.";
+const FEEDBACK_FALLBACK_NOTICE =
+  "Response coaching was unavailable, so reliable general feedback was used instead.";
+
+const answerFeedbackResultSchema = z
+  .object({
+    feedback: answerFeedbackSchema,
+    provider: z.enum(["mock", "openai"]),
+    fallback: z.boolean(),
+    notice: z.string().trim().min(1).optional(),
+  })
+  .strict();
 
 type FetchImplementation = typeof fetch;
 
@@ -33,6 +50,39 @@ async function deterministicFallback(init?: RequestInit) {
   });
 }
 
+async function deterministicFeedbackFallback(init?: RequestInit) {
+  const raw =
+    typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+  const input = answerFeedbackInputSchema.parse(raw);
+  const feedback = await new MockAnswerFeedbackProvider().generate(input);
+  return Response.json({
+    feedback,
+    provider: "mock",
+    fallback: true,
+    notice: FEEDBACK_FALLBACK_NOTICE,
+  });
+}
+
+function feedbackApiFromPromptApi(configuredApi: string): string | undefined {
+  try {
+    const url = new URL(configuredApi);
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      !url.pathname.endsWith("/api/prompts")
+    ) {
+      return undefined;
+    }
+    url.pathname = `${url.pathname.slice(0, -"prompts".length)}feedback`;
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+
 export function createMobilePromptFetch(
   realFetch: FetchImplementation,
   configuredApi: string | undefined,
@@ -45,9 +95,15 @@ export function createMobilePromptFetch(
         : input instanceof URL
           ? input.href
           : input.url;
-    if (url !== "/api/prompts") return realFetch(input, init);
+    const isPromptRequest = url === "/api/prompts";
+    const isFeedbackRequest = url === "/api/feedback";
+    if (!isPromptRequest && !isFeedbackRequest) return realFetch(input, init);
 
-    if (configuredApi) {
+    const hostedApi = isFeedbackRequest
+      ? configuredApi && feedbackApiFromPromptApi(configuredApi)
+      : configuredApi;
+
+    if (hostedApi) {
       const timeoutController = new AbortController();
       const abortFromCaller = () =>
         timeoutController.abort(init?.signal?.reason);
@@ -57,13 +113,17 @@ export function createMobilePromptFetch(
         timeoutMs,
       );
       try {
-        const response = await realFetch(configuredApi, {
+        const response = await realFetch(hostedApi, {
           ...init,
           signal: timeoutController.signal,
         });
-        if (!response.ok) throw new Error("Hosted prompt API was unavailable");
+        if (!response.ok) throw new Error("Hosted API was unavailable");
         const body: unknown = await response.clone().json();
-        promptBatchSchema.parse(body);
+        if (isFeedbackRequest) {
+          answerFeedbackResultSchema.parse(body);
+        } else {
+          promptBatchSchema.parse(body);
+        }
         return response;
       } catch {
         // A native release remains usable without exposing transport details.
@@ -73,6 +133,8 @@ export function createMobilePromptFetch(
       }
     }
 
-    return deterministicFallback(init);
+    return isFeedbackRequest
+      ? deterministicFeedbackFallback(init)
+      : deterministicFallback(init);
   };
 }

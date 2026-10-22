@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MockPromptGenerator } from "../../src/domain/mockPromptGenerator";
+import { MockAnswerFeedbackProvider } from "../../src/domain/mockAnswerFeedbackProvider";
+import type { AnswerFeedbackInput } from "../../src/domain/answerFeedbackSchemas";
 import type { NetworkGenerationInput } from "../../src/domain/schemas";
 import { requireProductionPromptApiUrl } from "./promptApiConfig";
 import { createMobilePromptFetch } from "./promptTransport";
@@ -27,11 +29,37 @@ const request: NetworkGenerationInput = {
 
 const init: RequestInit = { method: "POST", body: JSON.stringify(request) };
 
+const feedbackRequest: AnswerFeedbackInput = {
+  prompt: {
+    text: "Why did the character change their mind?",
+    skill: "inference",
+    difficultyLevel: "grade_level",
+  },
+  profile: {
+    gradeOrAge: "Grade 5",
+    readingLevel: "Advanced",
+    lexile: "900L",
+    difficulty: "grade_level",
+    responseLength: "medium",
+  },
+  responseText:
+    "The character changed their mind because they noticed the locked gate.",
+};
+
+const feedbackInit: RequestInit = {
+  method: "POST",
+  body: JSON.stringify(feedbackRequest),
+};
+
 async function validBatch() {
   return new MockPromptGenerator().generate({
     ...request,
     child: { ...request.child, name: "Reader" },
   });
+}
+
+async function validFeedback() {
+  return new MockAnswerFeedbackProvider().generate(feedbackRequest);
 }
 
 describe("requireProductionPromptApiUrl", () => {
@@ -79,6 +107,71 @@ describe("createMobilePromptFetch", () => {
 
     await mobileFetch("/unrelated", { method: "GET" });
     expect(realFetch).toHaveBeenLastCalledWith("/unrelated", { method: "GET" });
+  });
+
+  it("routes feedback to the sibling hosted endpoint and preserves valid output", async () => {
+    const hosted = Response.json({
+      feedback: await validFeedback(),
+      provider: "mock",
+      fallback: false,
+    });
+    const realFetch = vi.fn(async () => hosted);
+    const mobileFetch = createMobilePromptFetch(
+      realFetch,
+      "https://api.example.com/api/prompts",
+    );
+
+    expect(await mobileFetch("/api/feedback", feedbackInit)).toBe(hosted);
+    expect(realFetch).toHaveBeenCalledWith(
+      "https://api.example.com/api/feedback",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it.each([
+    ["request rejection", () => Promise.reject(new Error("offline"))],
+    [
+      "non-2xx response",
+      () => Promise.resolve(new Response("no", { status: 503 })),
+    ],
+    ["invalid JSON", () => Promise.resolve(new Response("not-json"))],
+    [
+      "invalid schema",
+      () => Promise.resolve(Response.json({ feedback: { strengths: [] } })),
+    ],
+  ])(
+    "uses deterministic schema-valid feedback after %s",
+    async (_name, outcome) => {
+      const mobileFetch = createMobilePromptFetch(
+        vi.fn(outcome),
+        "https://api.example.com/api/prompts",
+      );
+
+      const body = await (
+        await mobileFetch("/api/feedback", feedbackInit)
+      ).json();
+
+      expect(body).toEqual({
+        feedback: await validFeedback(),
+        provider: "mock",
+        fallback: true,
+        notice:
+          "Response coaching was unavailable, so reliable general feedback was used instead.",
+      });
+    },
+  );
+
+  it("uses deterministic feedback without a configured hosted endpoint", async () => {
+    const realFetch = vi.fn();
+    const mobileFetch = createMobilePromptFetch(realFetch, undefined);
+
+    const body = await (
+      await mobileFetch("/api/feedback", feedbackInit)
+    ).json();
+
+    expect(body.feedback).toEqual(await validFeedback());
+    expect(body).toMatchObject({ provider: "mock", fallback: true });
+    expect(realFetch).not.toHaveBeenCalled();
   });
 
   it.each([

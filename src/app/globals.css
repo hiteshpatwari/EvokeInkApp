@@ -794,6 +794,106 @@ textarea {
   font-size: 0.66rem;
   margin: 0 5px 5px;
 }
+.worksheet-prompt__review {
+  margin: 4px 5px 10px;
+}
+.response-review {
+  max-width: 860px;
+}
+.response-review__header {
+  margin: 24px 0 28px;
+  max-width: 700px;
+}
+.response-review__header h1 {
+  margin-bottom: 12px;
+}
+.selected-prompt,
+.response-editor,
+.coaching-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-top: 18px;
+  padding: 26px;
+}
+.selected-prompt h2 {
+  font-size: 1.4rem;
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+.selected-prompt p:last-child {
+  color: var(--muted);
+  margin-bottom: 0;
+}
+.response-editor label {
+  display: block;
+  font-weight: 750;
+  margin-bottom: 8px;
+}
+.response-editor textarea {
+  min-height: 190px;
+  resize: vertical;
+  width: 100%;
+}
+.response-editor__meta {
+  color: var(--muted);
+  display: flex;
+  font-size: 0.82rem;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 7px;
+}
+.response-error {
+  background: #fae9e7;
+  border-radius: 10px;
+  color: #803b35;
+  margin: 16px 0 0;
+  padding: 11px 13px;
+}
+.response-status {
+  color: var(--sage-700);
+  font-weight: 700;
+  margin: 16px 0 0;
+}
+.response-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+.coaching-card h2 {
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: normal;
+  margin: 24px 0 8px;
+}
+.coaching-card > h2:first-of-type {
+  color: var(--sage-700);
+  margin-top: 4px;
+}
+.coaching-card li {
+  line-height: 1.55;
+  margin-bottom: 6px;
+}
+.coaching-next-step {
+  background: var(--sage-50);
+  border-left: 4px solid var(--sage-500);
+  border-radius: 10px;
+  margin-top: 24px;
+  padding: 2px 18px 16px;
+}
+.coaching-next-step p,
+.coaching-limitation p {
+  margin-bottom: 0;
+}
+.coaching-limitation {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  margin-top: 26px;
+  padding-top: 18px;
+}
 .writing-lines {
   display: grid;
   gap: 0.23in;
@@ -933,6 +1033,19 @@ textarea {
   .worksheet__permission,
   .worksheet-prompt h2 {
     overflow-wrap: anywhere;
+  }
+  .selected-prompt,
+  .response-editor,
+  .coaching-card {
+    padding: 20px 18px;
+  }
+  .response-editor__meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .response-review__actions > button {
+    flex: 1 1 150px;
   }
 }
 

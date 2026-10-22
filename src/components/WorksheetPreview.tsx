@@ -1,4 +1,4 @@
-import type { ReadingSession } from "@/domain/schemas";
+import type { ReadingSession, WorksheetPrompt } from "@/domain/schemas";
 
 const label = (value: string) =>
   value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -8,7 +8,13 @@ function answerLineCount(length: string) {
   return Math.max(4, Math.min(8, first + 2));
 }
 
-export function WorksheetPreview({ session }: { session: ReadingSession }) {
+export function WorksheetPreview({
+  session,
+  onReviewResponse,
+}: {
+  session: ReadingSession;
+  onReviewResponse?: (prompt: WorksheetPrompt) => void;
+}) {
   return (
     <section className="worksheet" aria-label="Printable worksheet preview">
       <header className="worksheet__header">
@@ -50,6 +56,15 @@ export function WorksheetPreview({ session }: { session: ReadingSession }) {
             <p className="worksheet-prompt__hint">
               Aim for {prompt.suggestedResponseLength}.
             </p>
+            {onReviewResponse && (
+              <button
+                type="button"
+                className="worksheet-prompt__review secondary-button no-print"
+                onClick={() => onReviewResponse(prompt)}
+              >
+                Review a response
+              </button>
+            )}
             <div className="writing-lines" aria-hidden="true">
               {Array.from(
                 { length: answerLineCount(prompt.suggestedResponseLength) },

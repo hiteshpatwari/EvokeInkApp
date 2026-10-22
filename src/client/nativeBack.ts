@@ -4,6 +4,7 @@ export type AppScreen =
   | "create"
   | "review"
   | "preview"
+  | "response"
   | "saved";
 
 export const NATIVE_BACK_EVENT = "read-reflect:native-back";
@@ -12,6 +13,8 @@ export function getPreviousScreen(screen: AppScreen): AppScreen | null {
   switch (screen) {
     case "preview":
       return "review";
+    case "response":
+      return "preview";
     case "review":
       return "create";
     case "profile":

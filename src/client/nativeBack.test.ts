@@ -4,6 +4,7 @@ import { getPreviousScreen } from "./nativeBack";
 describe("native Back navigation", () => {
   it.each([
     ["preview", "review"],
+    ["response", "preview"],
     ["review", "create"],
     ["create", "home"],
     ["profile", "home"],
