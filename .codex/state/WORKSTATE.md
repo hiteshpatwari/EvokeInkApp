@@ -85,6 +85,10 @@ and live image-provider processing remain disabled.
   oxlint, scoped formatting, Next build, Vinext/Cloudflare build, mobile build,
   and diff checks passed. Independent security and UI reviews passed after the
   confirmation and focus fixes.
+- Refreshed the Capacitor Android assets and built the Phase 2 debug APK at
+  `mobile/android/app/build/outputs/apk/debug/app-debug.apk` (4,726,630 bytes,
+  SHA-256 `B67D1F703D36C0DC852825C8D894AF4BF3F7C2508EA3CC1C3D4C43B10B872D7F`).
+  The mobile artifact secret scan passed.
 
 ## Open issues and blockers
 
@@ -99,10 +103,12 @@ and live image-provider processing remain disabled.
   native device attestation.
 - This phase has not been deployed to the public Worker or installed on a
   physical Android device in this turn.
+- The S24 Ultra was not visible in `adb devices`, so physical camera/gallery
+  capture, installation, and device cleanup acceptance remain unverified.
 
 ## Immediate next action
 
-Commit and push Phase 2, then build/install the refreshed Android APK and run a
-physical camera/gallery acceptance pass. After device acceptance, Phase 3 may
+Reconnect the S24 Ultra with wireless debugging, install the refreshed APK, and
+run a physical camera/gallery acceptance pass. After device acceptance, Phase 3 may
 add disabled real transcription/feedback adapters; do not activate image or
 child-authored text processing until every external release gate passes.
