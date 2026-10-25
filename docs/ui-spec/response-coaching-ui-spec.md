@@ -18,17 +18,17 @@
 
 ## UI Surface and Flow
 
-| View or state                        | Entry / trigger                                        | User-visible result                                                                                                                          | Governing requirement / AC |
-| ------------------------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Saved worksheet                      | Open an existing worksheet                             | Each prompt offers `Review a response`.                                                                                                      | AC-001                     |
-| Response entry                       | Select `Review a response`                             | The selected prompt is visible with a bounded text area. Phase 1 accepts typed or pasted text.                                               | AC-001                     |
-| Empty validation                     | Submit blank or whitespace-only text                   | Inline guidance asks for a response and focus returns to the field.                                                                          | AC-002                     |
-| Reviewing                            | Submit a valid response                                | The action is disabled and announces `Reviewing response...`.                                                                                | AC-003                     |
-| Feedback                             | Review succeeds                                        | A coaching card shows strengths, observed evidence, missing or unclear prompt parts, one next step, a revision question, and any limitation. | AC-004, AC-005             |
-| Feedback unavailable                 | Provider or validation fails                           | The response remains editable and the family sees a retry-safe message without technical/provider details.                                   | AC-006                     |
-| Close review                         | Choose `Done` or navigate back                         | The response draft and feedback are discarded; the saved worksheet remains unchanged.                                                        | Approved ephemeral scope   |
-| Photo selection, later phase         | Choose `Use a photo` after its privacy gate is enabled | One image can be captured or selected, cropped, rotated, or retaken.                                                                         | AC-007                     |
-| Transcript confirmation, later phase | Image transcription succeeds                           | Extracted text is editable and no coaching request is made until the user confirms it.                                                       | AC-008                     |
+| View or state           | Entry / trigger                      | User-visible result                                                                                                                          | Governing requirement / AC |
+| ----------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Saved worksheet         | Open an existing worksheet           | Each prompt offers `Review a response`.                                                                                                      | AC-001                     |
+| Response entry          | Select `Review a response`           | The selected prompt is visible with a bounded text area. Phase 1 accepts typed or pasted text.                                               | AC-001                     |
+| Empty validation        | Submit blank or whitespace-only text | Inline guidance asks for a response and focus returns to the field.                                                                          | AC-002                     |
+| Reviewing               | Submit a valid response              | The action is disabled and announces `Reviewing response...`.                                                                                | AC-003                     |
+| Feedback                | Review succeeds                      | A coaching card shows strengths, observed evidence, missing or unclear prompt parts, one next step, a revision question, and any limitation. | AC-004, AC-005             |
+| Feedback unavailable    | Provider or validation fails         | The response remains editable and the family sees a retry-safe message without technical/provider details.                                   | AC-006                     |
+| Close review            | Choose `Done` or navigate back       | The response draft and feedback are discarded; the saved worksheet remains unchanged.                                                        | Approved ephemeral scope   |
+| Photo selection         | Choose `Use a photo`                 | One image can be captured or selected, trimmed, rotated, replaced, or discarded entirely on-device.                                          | AC-007                     |
+| Transcript confirmation | Local photo preparation succeeds     | A manual provisional transcript is editable and no coaching request is made until the user confirms it; automatic OCR remains disabled.      | AC-008                     |
 
 ## Components and Interactions
 
@@ -38,7 +38,7 @@
 | Response editor             | New                                          | Prompt text and response draft             | Enforces bounded non-empty input and preserves the draft after recoverable errors.          | AC-002, AC-006   |
 | Coaching card               | New                                          | Validated structured feedback              | Renders bounded fields in strength-first order. It never synthesizes fields in the browser. | AC-004           |
 | Grounding limitation        | New                                          | Feedback grounding and limitation          | Clearly distinguishes writing/prompt coaching from factual book verification.               | AC-005           |
-| Image/transcript step       | New, later phase                             | One local image and provisional transcript | Requires transcript confirmation before feedback; provides manual entry fallback.           | AC-007, AC-008   |
+| Image/transcript step       | New                                          | One local image and provisional transcript | Requires transcript confirmation before feedback; provides manual entry fallback.           | AC-007, AC-008   |
 
 ### State / Display Detail
 
@@ -80,10 +80,11 @@
 
 ## Open User Decisions
 
-None for Phase 1. Camera/image-provider activation remains an operational and privacy approval gate, not an unresolved Phase 1 UI requirement.
+None for Phase 2. Automatic handwriting transcription and live image-provider activation remain disabled until Phase 3 implementation and the operational/privacy release gates pass.
 
 ## Update History
 
-| Date       | Version | Changes                                           |
-| ---------- | ------- | ------------------------------------------------- |
-| 2026-10-22 | 1.0     | Initial approved response-coaching specification. |
+| Date       | Version | Changes                                                             |
+| ---------- | ------- | ------------------------------------------------------------------- |
+| 2026-10-22 | 1.0     | Initial approved response-coaching specification.                   |
+| 2026-10-24 | 1.1     | Added local photo preparation and confirmed manual transcript flow. |

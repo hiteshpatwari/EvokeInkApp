@@ -2,16 +2,17 @@
 
 ## Objective
 
-Keep the completed mock response-coaching slice production-ready while
-removing the known Next.js security exposure before deployment.
+Add safe local photo preparation and transcript confirmation to response
+coaching without uploading or persisting student images.
 
 ## Current status
 
-Response-coaching Phase 1 remains complete and mock-only. Next.js was upgraded
-from 16.4.0 to the exact security-fixed 16.4.3 release in an isolated worktree,
-independently reviewed, and integrated into `main`. The triggering Next.js
-advisories are removed; separate pre-existing transitive build-tool advisories
-remain tracked.
+Response-coaching Phase 2 is implemented and independently reviewed. A family
+can choose one JPEG, PNG, or WebP response photo, prepare it locally, rotate or
+trim it, type and confirm a provisional transcript, and then use the existing
+text-only coaching request. Images remain in memory, are never uploaded or
+persisted, and are disposed on every terminal path. Automatic handwriting OCR
+and live image-provider processing remain disabled.
 
 ## Completed work
 
@@ -44,6 +45,18 @@ remain tracked.
   Next.js findings were removed. Remaining Zod, Undici, and fast-uri findings
   are unchanged transitive Cloudflare/webpack dependencies and were not
   introduced by this patch.
+- Added strict local photo processing with MIME plus magic-byte validation,
+  decoded byte/dimension/pixel bounds, rectangular trim, quarter-turn rotation,
+  bounded canvas re-encoding to JPEG, and idempotent object-URL disposal.
+- Added an accessible photo workspace with an on-device privacy disclosure,
+  platform camera/file picker, visible rotate/trim/replace/discard controls,
+  manual provisional transcript, explicit confirmation, and typed fallback.
+- Closed the transcript-confirmation bypass by hiding the feedback form during
+  photo mode and guarding submission defensively. Focus moves into the photo
+  workflow and returns to the response field on confirmation or typed fallback.
+- Verified the real browser journey at 375px: local image upload, rotate, trim,
+  transcript edit and confirmation produced no `/api/feedback` request; the
+  separate Get feedback action produced exactly one text-only request.
 
 ## Files or areas changed
 
@@ -68,14 +81,19 @@ remain tracked.
   lint, formatting, Next production build, Vinext/Cloudflare build, mobile web
   build, clean Android debug APK build, artifact secret scan, and diff checks
   passed. The installed main-checkout version reports `Next.js v16.4.3`.
+- Phase 2 full Vitest: 43 files / 271 tests passed. Root/mobile TypeScript,
+  oxlint, scoped formatting, Next build, Vinext/Cloudflare build, mobile build,
+  and diff checks passed. Independent security and UI reviews passed after the
+  confirmation and focus fixes.
 
 ## Open issues and blockers
 
 - `pnpm audit` still reports pre-existing transitive findings: Zod through
   Cloudflare config, Undici through Miniflare, and fast-uri through webpack.
   These need a separately scoped compatible dependency remediation.
-- Phase 2 photo capture/transcript confirmation and bounded local image cleanup
-  are not implemented.
+- Automatic handwriting recognition is not implemented; the current
+  provisional transcript is entered and confirmed manually after local photo
+  preparation.
 - Live transcription/feedback adapters remain disabled pending privacy/store
   approval, retention review, budget controls, controlled web acceptance, and
   native device attestation.
@@ -84,8 +102,7 @@ remain tracked.
 
 ## Immediate next action
 
-Push the verified security commit on `main`, then deploy and smoke-test the
-mock-only response-coaching slice before physical Android acceptance. Track the
-remaining transitive audit findings separately. After device acceptance, begin
-Phase 2 with a fixture-driven photo/transcript state machine; do not send images
-or child-authored text to a live provider until the external release gates pass.
+Commit and push Phase 2, then build/install the refreshed Android APK and run a
+physical camera/gallery acceptance pass. After device acceptance, Phase 3 may
+add disabled real transcription/feedback adapters; do not activate image or
+child-authored text processing until every external release gate passes.

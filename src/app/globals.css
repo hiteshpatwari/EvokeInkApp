@@ -836,6 +836,69 @@ textarea {
   resize: vertical;
   width: 100%;
 }
+.response-editor__photo-action {
+  margin-top: 14px;
+}
+.response-photo {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 26px;
+}
+.response-photo h2,
+.response-photo p {
+  margin-bottom: 0;
+}
+.response-photo__privacy {
+  background: var(--sage-50);
+  border-left: 4px solid var(--sage-500);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.response-photo__picker {
+  font-weight: 750;
+}
+.response-photo input[type="file"] {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 48px;
+  padding: 10px;
+  width: 100%;
+}
+.response-photo__workspace {
+  display: grid;
+  gap: 14px;
+}
+.response-photo__preview {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: block;
+  margin-inline: auto;
+  max-height: 480px;
+  object-fit: contain;
+  width: min(100%, 672px);
+}
+.response-photo__controls,
+.response-photo__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.response-photo__controls > button,
+.response-photo__actions > button {
+  min-height: 48px;
+}
+.response-photo textarea {
+  min-height: 160px;
+  resize: vertical;
+  width: 100%;
+}
 .response-editor__meta {
   color: var(--muted);
   display: flex;
@@ -1036,6 +1099,7 @@ textarea {
   }
   .selected-prompt,
   .response-editor,
+  .response-photo,
   .coaching-card {
     padding: 20px 18px;
   }
@@ -1046,6 +1110,10 @@ textarea {
   }
   .response-review__actions > button {
     flex: 1 1 150px;
+  }
+  .response-photo__controls > button,
+  .response-photo__actions > button {
+    flex: 1 1 100%;
   }
 }
 

@@ -65,7 +65,7 @@ Deliver response coaching in dependency order, proving ephemeral typed determini
 
 #### Tasks
 
-- [ ] **P2-T1: Add fixture-driven image and transcript state machine**
+- [x] **P2-T1: Add fixture-driven image and transcript state machine**
   - **Source**: UI Spec photo/transcript states; Design AC-007, AC-008
   - **Scope**: One-image selection contract, crop/rotate/retake states, provisional transcript editor, manual-entry fallback, and fixture tests
   - **Depends on**: P1-T4
@@ -73,7 +73,7 @@ Deliver response coaching in dependency order, proving ephemeral typed determini
   - **Primary failure**: OCR output is analyzed without user confirmation.
   - **Observable check**: Network spy remains empty until `Confirm transcript` is activated.
 
-- [ ] **P2-T2: Implement bounded local image processing and cleanup**
+- [x] **P2-T2: Implement bounded local image processing and cleanup**
   - **Source**: Design `Security Boundary`; AC-007
   - **Scope**: Raster type and magic-byte validation, dimension/pixel/size limits, local resize, metadata removal, transient cleanup
   - **Depends on**: P2-T1
@@ -83,7 +83,7 @@ Deliver response coaching in dependency order, proving ephemeral typed determini
 
 #### Phase Completion
 
-- [ ] Photo UX and local processing pass with fixtures; no child response or image is sent externally.
+- [x] Photo UX and local processing pass with fixtures; no child response or image is sent externally.
 
 ### Phase 3: Disabled real-provider capability
 

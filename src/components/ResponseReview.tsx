@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  processResponsePhoto,
+  type ProcessedResponsePhoto,
+  type ResponsePhotoTransform,
+} from "@/client/responsePhotoProcessing";
 import { getInstallationToken } from "@/client/promptRequest";
 import { toNetworkAnswerFeedbackInput } from "@/client/answerFeedbackRequest";
 import {
@@ -8,11 +13,16 @@ import {
   type AnswerFeedback,
 } from "@/domain/answerFeedbackSchemas";
 import type { ChildProfile, WorksheetPrompt } from "@/domain/schemas";
+import { ResponsePhotoPreparation } from "./ResponsePhotoPreparation";
 
 interface ResponseReviewProps {
   childSnapshot: ChildProfile;
   prompt: WorksheetPrompt;
   onDone: () => void;
+  processPhoto?: (
+    file: File,
+    transform?: ResponsePhotoTransform,
+  ) => Promise<ProcessedResponsePhoto>;
 }
 
 const UNAVAILABLE_MESSAGE =
@@ -22,11 +32,14 @@ export function ResponseReview({
   childSnapshot,
   prompt,
   onDone,
+  processPhoto = processResponsePhoto,
 }: ResponseReviewProps) {
   const [responseText, setResponseText] = useState("");
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [error, setError] = useState("");
   const [reviewing, setReviewing] = useState(false);
+  const [photoMode, setPhotoMode] = useState(false);
+  const [transcriptNotice, setTranscriptNotice] = useState("");
   const responseRef = useRef<HTMLTextAreaElement>(null);
   const mountedRef = useRef(true);
 
@@ -39,7 +52,7 @@ export function ResponseReview({
 
   const submit = async (event?: FormEvent) => {
     event?.preventDefault();
-    if (reviewing) return;
+    if (reviewing || photoMode) return;
 
     let input;
     try {
@@ -105,8 +118,29 @@ export function ResponseReview({
         <p>Aim for {prompt.suggestedResponseLength}.</p>
       </section>
 
+      {photoMode && (
+        <ResponsePhotoPreparation
+          processPhoto={processPhoto}
+          onUseTypedEntry={() => {
+            setPhotoMode(false);
+            window.setTimeout(() => responseRef.current?.focus(), 0);
+          }}
+          onConfirmTranscript={(transcript) => {
+            setResponseText(transcript);
+            setFeedback(null);
+            setError("");
+            setPhotoMode(false);
+            setTranscriptNotice(
+              "Transcript confirmed. Review it below, then choose Get feedback when you are ready.",
+            );
+            window.setTimeout(() => responseRef.current?.focus(), 0);
+          }}
+        />
+      )}
+
       <form
         className="response-editor"
+        hidden={photoMode}
         onSubmit={(event) => void submit(event)}
       >
         <label htmlFor="student-response">Student response</label>
@@ -128,6 +162,26 @@ export function ResponseReview({
           <span>Type or paste one response. Maximum 4,000 characters.</span>
           <span>{responseText.length.toLocaleString()} / 4,000</span>
         </div>
+        {!photoMode && (
+          <button
+            type="button"
+            className="secondary-button response-editor__photo-action"
+            disabled={reviewing}
+            onClick={() => {
+              setFeedback(null);
+              setError("");
+              setPhotoMode(true);
+              setTranscriptNotice("");
+            }}
+          >
+            Use a photo
+          </button>
+        )}
+        {transcriptNotice && (
+          <p className="response-status" role="status" aria-live="polite">
+            {transcriptNotice}
+          </p>
+        )}
         {error && (
           <p className="response-error" role="alert">
             {error}
