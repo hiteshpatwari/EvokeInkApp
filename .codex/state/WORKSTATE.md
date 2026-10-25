@@ -2,17 +2,16 @@
 
 ## Objective
 
-Deliver the first safe vertical slice of student response coaching: one typed
-response for one saved worksheet prompt, with deterministic constructive mock
-feedback and no persistence.
+Keep the completed mock response-coaching slice production-ready while
+removing the known Next.js security exposure before deployment.
 
 ## Current status
 
-Response-coaching Phase 1 is implemented and independently reviewed. The web
-and Capacitor clients can review a typed response against its selected prompt.
-Feedback is deterministic, strength-first, schema validated, explicitly
-limited, and discarded when the flow closes. The capability remains mock-only;
-photo/OCR and live provider processing are intentionally not enabled.
+Response-coaching Phase 1 remains complete and mock-only. Next.js was upgraded
+from 16.4.0 to the exact security-fixed 16.4.3 release in an isolated worktree,
+independently reviewed, and integrated into `main`. The triggering Next.js
+advisories are removed; separate pre-existing transitive build-tool advisories
+remain tracked.
 
 ## Completed work
 
@@ -37,6 +36,14 @@ photo/OCR and live provider processing are intentionally not enabled.
 - Completed a real Playwright flow at desktop and 375x812: generated and saved a
   worksheet, opened the correct response review, submitted a typed response,
   and observed the full coaching result without application console errors.
+- Ran the guided Next.js security upgrade in a dedicated worktree, checked local
+  and remote branches plus open GitHub pull requests for duplicate work, and
+  found none. Pinned Next.js 16.4.3 and enabled `experimental.agentUpgrade` in
+  security mode as required by the updater.
+- Compared dependency audits before and after: two critical and one high
+  Next.js findings were removed. Remaining Zod, Undici, and fast-uri findings
+  are unchanged transitive Cloudflare/webpack dependencies and were not
+  introduced by this patch.
 
 ## Files or areas changed
 
@@ -57,11 +64,16 @@ photo/OCR and live provider processing are intentionally not enabled.
 - Mobile production build against the public Worker passed; production bundle
   secret scan passed. Existing >500 kB chunk warnings remain non-blocking.
 - Independent domain, API, and UI/mobile reviews all passed after fixes.
+- On Next.js 16.4.3: 41 test files / 247 tests passed; root/mobile TypeScript,
+  lint, formatting, Next production build, Vinext/Cloudflare build, mobile web
+  build, clean Android debug APK build, artifact secret scan, and diff checks
+  passed. The installed main-checkout version reports `Next.js v16.4.3`.
 
 ## Open issues and blockers
 
-- Next.js 16.4.0 reports a known security vulnerability and recommends the
-  repository's guided security upgrade.
+- `pnpm audit` still reports pre-existing transitive findings: Zod through
+  Cloudflare config, Undici through Miniflare, and fast-uri through webpack.
+  These need a separately scoped compatible dependency remediation.
 - Phase 2 photo capture/transcript confirmation and bounded local image cleanup
   are not implemented.
 - Live transcription/feedback adapters remain disabled pending privacy/store
@@ -72,7 +84,8 @@ photo/OCR and live provider processing are intentionally not enabled.
 
 ## Immediate next action
 
-Commit Phase 1, then choose whether to run the Next.js security upgrade before
-deploying the mock-only response-coaching slice. After device acceptance, begin
+Push the verified security commit on `main`, then deploy and smoke-test the
+mock-only response-coaching slice before physical Android acceptance. Track the
+remaining transitive audit findings separately. After device acceptance, begin
 Phase 2 with a fixture-driven photo/transcript state machine; do not send images
 or child-authored text to a live provider until the external release gates pass.
