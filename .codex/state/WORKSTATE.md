@@ -7,11 +7,16 @@ Capacitor applications without changing their product behavior.
 
 ## Current status
 
-The **Ink & Marigold** theme is implemented locally across the shared web/mobile
-UI. It replaces the generic sage palette with warm parchment surfaces, deep
-indigo structure, marigold accents, and restrained terracotta/status colors.
-The UX design authority and final code reviewer both passed the corrected
-implementation. It has not been deployed or installed as a refreshed APK.
+The **Ink & Marigold** theme is implemented on `main`. A follow-up consistency
+correction is verified locally: Saved reflections now uses the same contained
+editorial header, panel widths, spacing rhythm, and full-width empty state as
+Home. At 760 px and below, the top bar shows exactly two accessible 48 px icon
+buttons for Home and Saved instead of long menu text. This follow-up is ready to
+commit and push. It has not been deployed or installed as a refreshed APK.
+
+The Next.js development server is currently running at `http://localhost:3000`
+for user inspection. Starting it regenerated `next-env.d.ts`; that generated
+drift is not part of the follow-up implementation and must remain uncommitted.
 
 ## Completed work
 
@@ -31,6 +36,12 @@ implementation. It has not been deployed or installed as a refreshed APK.
   approved eyebrow tracking, and 48 px controls (including icon buttons) for
   narrow and native layouts.
 - Preserved reduced-motion, forced-colors, and black-and-white print behavior.
+- Reconciled the Saved reflections screen with the Home composition: contained
+  gradient introduction, surfaced filter toolbar, full-width empty state, and
+  aligned backup panel.
+- Added inline Home and Saved icons without a new dependency. Desktop retains
+  icon plus text; narrow web and native views retain accessible names/tooltips
+  while showing two icon-only navigation controls.
 - Gemma4:26b was started twice through the required global router and confirmed
   in Ollama, but both runs drifted into unrelated Mobbin tasks. They were stopped
   before modifying the workspace; implementation was completed by a scoped
@@ -38,7 +49,7 @@ implementation. It has not been deployed or installed as a refreshed APK.
 
 ## Validation evidence
 
-- Full Vitest: 49 files / 302 tests passed.
+- Full Vitest: 49 files / 303 tests passed.
 - Root and mobile TypeScript passed.
 - Oxlint with warnings denied, scoped Prettier, and `git diff --check` passed.
 - Next.js 16.4.3 production build passed.
@@ -47,6 +58,9 @@ implementation. It has not been deployed or installed as a refreshed APK.
 - Browser review covered desktop, 430 px mobile web, and 320 px native-emulated
   layouts with no horizontal overflow. The child-profile form also remained
   usable at the narrow native viewport.
+- Follow-up browser review covered the corrected Saved reflections screen at
+  desktop and 375 x 812. The two icon controls, active state, stacked filters,
+  contained empty state, and backup panel rendered correctly.
 - Final UX designer verdict: pass. Final independent code review: pass.
 
 ## Open issues and blockers
@@ -60,5 +74,6 @@ implementation. It has not been deployed or installed as a refreshed APK.
 
 ## Immediate next action
 
-Commit and push the verified Ink & Marigold theme. Deployment and refreshed APK
-installation can then be handled as the next explicit release step.
+Commit and push the verified consistency/navigation follow-up while excluding
+generated `next-env.d.ts`. Keep the local preview available for user inspection.
+Deployment and refreshed APK installation remain separate release steps.

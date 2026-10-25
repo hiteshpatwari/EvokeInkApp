@@ -185,7 +185,7 @@ export function DataBackupPanel({
   };
 
   return (
-    <section className="panel" aria-labelledby="backup-heading">
+    <section className="panel library-backup" aria-labelledby="backup-heading">
       <p className="eyebrow">Data safety</p>
       <h2 id="backup-heading">Backup &amp; restore</h2>
       <p className="muted">

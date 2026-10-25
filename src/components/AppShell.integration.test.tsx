@@ -47,6 +47,12 @@ describe("Read & Reflect workflow", () => {
 
     const home = await screen.findByRole("button", { name: "Home" });
     const saved = screen.getByRole("button", { name: "Saved reflections" });
+    expect(home.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(saved.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(home.querySelector(".nav-label")).toHaveTextContent("Home");
+    expect(saved.querySelector(".nav-label")).toHaveTextContent(
+      "Saved reflections",
+    );
     expect(home).toHaveAttribute("aria-current", "page");
     expect(saved).not.toHaveAttribute("aria-current");
 

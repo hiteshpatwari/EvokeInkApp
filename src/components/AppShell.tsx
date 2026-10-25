@@ -827,17 +827,40 @@ export function AppShell({ storage }: AppShellProps = {}) {
         <nav aria-label="Main navigation">
           <button
             type="button"
+            aria-label="Home"
             aria-current={screen === "home" ? "page" : undefined}
+            title="Home"
             onClick={goHome}
           >
-            Home
+            <svg
+              className="nav-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M3.5 10.5 12 3l8.5 7.5" />
+              <path d="M5.5 9.5V21h13V9.5" />
+              <path d="M9.5 21v-6h5v6" />
+            </svg>
+            <span className="nav-label">Home</span>
           </button>
           <button
             type="button"
+            aria-label="Saved reflections"
             aria-current={screen === "saved" ? "page" : undefined}
+            title="Saved reflections"
             onClick={() => setScreen("saved")}
           >
-            Saved reflections
+            <svg
+              className="nav-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5z" />
+              <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z" />
+            </svg>
+            <span className="nav-label">Saved reflections</span>
           </button>
         </nav>
       </header>
@@ -1582,15 +1605,15 @@ export function AppShell({ storage }: AppShellProps = {}) {
       )}
 
       {screen === "saved" && (
-        <main className="page" tabIndex={-1}>
-          <div className="page-intro">
+        <main className="page page--library" tabIndex={-1}>
+          <section className="page-intro page-intro--library">
             <p className="eyebrow">YOUR LIBRARY</p>
             <h1>Saved reflections</h1>
             <p>
               Reopen, reprint, or duplicate a worksheet without changing its
               original reading-profile snapshot.
             </p>
-          </div>
+          </section>
           {pendingDeleteSession && (
             <section
               ref={deleteDialogRef}
@@ -1627,7 +1650,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
               </div>
             </section>
           )}
-          <div className="filter-row">
+          <div className="filter-row library-toolbar">
             <label>
               Filter by child or book{" "}
               <input

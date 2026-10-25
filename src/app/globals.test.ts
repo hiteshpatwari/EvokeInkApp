@@ -47,4 +47,13 @@ describe("mobile viewport safety", () => {
     expect(styles).toContain('html[data-native-app="true"] .hero-card h1');
     expect(styles).toContain("font-size: min(2.15rem, 10vw)");
   });
+
+  it("switches navigation labels to icon-only controls on small screens", () => {
+    expect(styles).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.nav-label\s*\{[^}]*display: none;/,
+    );
+    expect(styles).toMatch(
+      /@media \(max-width: 760px\)[\s\S]*?\.topbar nav button\s*\{[^}]*width: 48px;/,
+    );
+  });
 });
