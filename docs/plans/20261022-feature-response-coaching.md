@@ -71,7 +71,7 @@ Deliver response coaching in dependency order, proving ephemeral typed determini
   - **Depends on**: P1-T4
   - **Verification**: Browser/mobile component tests proving no feedback request before transcript confirmation
   - **Primary failure**: OCR output is analyzed without user confirmation.
-  - **Observable check**: Network spy remains empty until `Confirm transcript` is activated.
+  - **Observable check**: Selection, rotation, and trimming make no request; feedback remains blocked until confirmed text is submitted.
 
 - [x] **P2-T2: Implement bounded local image processing and cleanup**
   - **Source**: Design `Security Boundary`; AC-007
@@ -96,6 +96,8 @@ Deliver response coaching in dependency order, proving ephemeral typed determini
   - **Verification**: Test-double suite, injection fixtures, artifact secret scan, and proof that disabled configuration never invokes the provider
   - **Primary failure**: Instructions inside student content change the rubric or one user action triggers automatic paid retries.
   - **Observable check**: Injection content remains answer data and one action spends at most one configured image-analysis attempt.
+  - **Implemented transcription slice**: Provider-neutral strict transcription contract, server-only OpenAI image adapter with `store: false`, explicit `Read handwriting` upload, confirm/edit/retake UX, truthful mock unavailability, independent quota/budget controls, content-free events, transient cleanup, and web/native fail-closed configuration.
+  - **Still required for task completion**: Integrated adversarial verification, real feedback-provider adapter, owner and provider-retention approval, controlled web acceptance, and the external release evidence listed below. No live child content has been processed.
 
 - [ ] **P3-T2: Implement native attestation enforcement while activation remains disabled**
   - **Source**: Design `Security Boundary`; current mobile architecture constraint
@@ -116,7 +118,7 @@ These are operational approvals, not repository implementation tasks. Every cond
 - Owner approval of the provider's child-data, retention, and under-18 posture.
 - Updated privacy policy and mobile-store disclosures for student-authored text and images.
 - Verified content-free host logging and approved retention.
-- Configured and tested feedback-specific quota and cost budgets.
+- Configured and tested transcription-specific and feedback-specific quota and cost budgets.
 - Controlled web pilot approval; native activation additionally requires verified device attestation.
 - Induced provider failure, rollback, and cost-reconciliation evidence.
 

@@ -17,11 +17,31 @@ if (providerName !== "mock" && providerName !== "openai") {
   throw new Error("AI_PROVIDER must be either mock or openai.");
 }
 
+const transcriptionProviderName = environmentText(
+  "HANDWRITING_TRANSCRIPTION_PROVIDER",
+  "mock",
+).toLowerCase();
+if (
+  transcriptionProviderName !== "mock" &&
+  transcriptionProviderName !== "openai"
+) {
+  throw new Error(
+    "HANDWRITING_TRANSCRIPTION_PROVIDER must be either mock or openai.",
+  );
+}
+
 const providerSecretBindings =
-  providerName === "openai"
+  providerName === "openai" || transcriptionProviderName === "openai"
     ? {
         OPENAI_API_KEY: bindings.secret(),
-        AI_QUOTA_HASH_SECRET: bindings.secret(),
+        ...(providerName === "openai"
+          ? { AI_QUOTA_HASH_SECRET: bindings.secret() }
+          : {}),
+        ...(transcriptionProviderName === "openai"
+          ? {
+              HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET: bindings.secret(),
+            }
+          : {}),
       }
     : {};
 
@@ -48,6 +68,39 @@ export default defineConfig({
       ),
       OPENAI_MAX_RETRIES: bindings.text(
         environmentText("OPENAI_MAX_RETRIES", "1"),
+      ),
+      HANDWRITING_TRANSCRIPTION_PROVIDER: bindings.text(
+        transcriptionProviderName,
+      ),
+      HANDWRITING_TRANSCRIPTION_LIVE_APPROVED: bindings.text(
+        environmentText("HANDWRITING_TRANSCRIPTION_LIVE_APPROVED", "false"),
+      ),
+      HANDWRITING_TRANSCRIPTION_MODEL: bindings.text(
+        environmentText("HANDWRITING_TRANSCRIPTION_MODEL", "gpt-5-mini"),
+      ),
+      HANDWRITING_TRANSCRIPTION_MAX_REQUEST_BYTES: bindings.text(
+        environmentText(
+          "HANDWRITING_TRANSCRIPTION_MAX_REQUEST_BYTES",
+          "4259840",
+        ),
+      ),
+      HANDWRITING_TRANSCRIPTION_INSTALLATION_MONTHLY_LIMIT: bindings.text(
+        environmentText(
+          "HANDWRITING_TRANSCRIPTION_INSTALLATION_MONTHLY_LIMIT",
+          "20",
+        ),
+      ),
+      HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT: bindings.text(
+        environmentText("HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT", "200"),
+      ),
+      HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD: bindings.text(
+        environmentText("HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD", "50"),
+      ),
+      HANDWRITING_TRANSCRIPTION_ESTIMATED_REQUEST_COST_USD: bindings.text(
+        environmentText(
+          "HANDWRITING_TRANSCRIPTION_ESTIMATED_REQUEST_COST_USD",
+          "0.03",
+        ),
       ),
       APP_ALLOWED_ORIGINS: bindings.text(
         environmentText("APP_ALLOWED_ORIGINS", "http://localhost:3001"),

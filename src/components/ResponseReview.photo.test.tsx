@@ -56,14 +56,24 @@ afterEach(() => {
 });
 
 describe("response photo preparation", () => {
-  it("requires transcript confirmation and a separate feedback action", async () => {
+  it("uploads only after explicit consent, confirms extracted text, then sends text-only feedback", async () => {
     const user = userEvent.setup();
     const dispose = vi.fn();
     const processPhoto = vi.fn(async () => processedPhoto(dispose));
-    const fetchMock = vi.fn(
-      async (_input: RequestInfo | URL, _init?: RequestInit) =>
-        Response.json({ feedback, provider: "mock", fallback: false }),
-    );
+    const fetchMock = vi.fn<typeof fetch>(async (input, _init) => {
+      if (String(input) === "/api/transcriptions") {
+        return Response.json({
+          transcription: {
+            transcript:
+              "The character chose to help because it was the fair choice.",
+            uncertainSegments: ["fair choice"],
+          },
+          provider: "openai",
+          fallback: false,
+        });
+      }
+      return Response.json({ feedback, provider: "mock", fallback: false });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const view = render(
@@ -80,7 +90,7 @@ describe("response photo preparation", () => {
       "Keep this typed draft until confirmation.",
     );
     await user.click(screen.getByRole("button", { name: "Use a photo" }));
-    expect(screen.getByText(/processed temporarily/i)).toBeInTheDocument();
+    expect(screen.getByText(/stay on this device/i)).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Prepare one response photo" }),
     ).toHaveFocus();
@@ -109,36 +119,82 @@ describe("response photo preparation", () => {
     await screen.findByAltText("Selected response photo");
     expect(fetchMock).not.toHaveBeenCalled();
 
-    const transcript = screen.getByLabelText("Provisional transcript");
-    await user.type(
-      transcript,
-      "The character chose to help because it was the fair choice.",
-    );
+    expect(
+      screen.getByRole("button", { name: "Read handwriting" }),
+    ).toHaveFocus();
     fireEvent.submit(view.container.querySelector("form")!);
     expect(fetchMock).not.toHaveBeenCalled();
-    await user.click(
-      screen.getByRole("button", { name: "Confirm transcript" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Read handwriting" }));
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Student response")).toHaveValue(
+    expect(await screen.findByLabelText("Extracted response")).toHaveValue(
       "The character chose to help because it was the fair choice.",
     );
-    await waitFor(() =>
-      expect(screen.getByLabelText("Student response")).toHaveFocus(),
-    );
-    expect(dispose).toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Get feedback" }));
-    await screen.findByRole("heading", { name: "What you did well" });
+    expect(screen.getByText(/Double-check: fair choice/i)).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledOnce();
-    const request = fetchMock.mock.calls[0]![1] as RequestInit;
+    const transcriptionRequest = fetchMock.mock.calls[0]![1] as RequestInit;
+    expect(transcriptionRequest.body).toBeInstanceOf(FormData);
+    expect((transcriptionRequest.body as FormData).get("image")).toBeInstanceOf(
+      Blob,
+    );
+    expect(transcriptionRequest.headers).not.toHaveProperty("Content-Type");
+
+    await user.click(
+      screen.getByRole("button", { name: "Looks right — get feedback" }),
+    );
+    await screen.findByRole("heading", { name: "What you did well" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(dispose).toHaveBeenCalled();
+    const request = fetchMock.mock.calls[1]![1] as RequestInit;
     const body = JSON.parse(String(request.body)) as Record<string, unknown>;
     expect(body).toMatchObject({
       responseText:
         "The character chose to help because it was the fair choice.",
     });
     expect(JSON.stringify(body)).not.toMatch(/image|filename|blob|data:/i);
+  });
+
+  it("shows an honest manual fallback when handwriting cannot be read", async () => {
+    const user = userEvent.setup();
+    const processPhoto = vi.fn(async () => processedPhoto());
+    const transcribePhoto = vi.fn(async () => {
+      throw new Error("provider internals");
+    });
+    vi.stubGlobal("fetch", vi.fn());
+    render(
+      <ResponseReview
+        childSnapshot={profile}
+        prompt={prompt}
+        onDone={vi.fn()}
+        processPhoto={processPhoto}
+        transcribePhoto={transcribePhoto}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Use a photo" }));
+    await user.upload(
+      screen.getByLabelText("Choose one response photo"),
+      new File([new Uint8Array([0xff, 0xd8, 0xff])], "answer.jpg", {
+        type: "image/jpeg",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Read handwriting" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "could not be read right now",
+    );
+    expect(screen.queryByText(/provider internals/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Extracted response"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Try reading again" }),
+    ).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Type it myself" }));
+    const manual = screen.getByLabelText("Extracted response");
+    expect(manual).toHaveFocus();
+    await user.type(manual, "My own careful transcription.");
+    expect(screen.getByRole("button", { name: /Looks right/i })).toBeEnabled();
   });
 
   it("cleans up on discard and unmount without replacing a typed draft", async () => {

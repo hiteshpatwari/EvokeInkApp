@@ -7,11 +7,16 @@ import {
   type ProcessedResponsePhoto,
   type ResponsePhotoTransform,
 } from "@/client/responsePhotoProcessing";
+import {
+  requestHandwritingTranscription,
+  type HandwritingTranscription,
+} from "@/client/handwritingTranscriptionRequest";
 
 export interface ResponsePhotoPreparationProps {
-  onConfirmTranscript: (transcript: string) => void;
+  onConfirmTranscript: (transcript: string) => void | Promise<void>;
   onUseTypedEntry: () => void;
   processPhoto?: typeof processResponsePhoto;
+  transcribePhoto?: (image: Blob) => Promise<HandwritingTranscription>;
 }
 
 const GENERIC_PHOTO_ERROR =
@@ -21,15 +26,23 @@ export function ResponsePhotoPreparation({
   onConfirmTranscript,
   onUseTypedEntry,
   processPhoto = processResponsePhoto,
+  transcribePhoto = requestHandwritingTranscription,
 }: ResponsePhotoPreparationProps) {
   const [photo, setPhoto] = useState<ProcessedResponsePhoto | null>(null);
   const [transcript, setTranscript] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [editingTranscript, setEditingTranscript] = useState(false);
+  const [extractionAttempted, setExtractionAttempted] = useState(false);
+  const [uncertainSegments, setUncertainSegments] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const transcriptRef = useRef<HTMLTextAreaElement>(null);
+  const readButtonRef = useRef<HTMLButtonElement>(null);
+  const extractedHeadingRef = useRef<HTMLHeadingElement>(null);
+  const retryButtonRef = useRef<HTMLButtonElement>(null);
   const photoRef = useRef<ProcessedResponsePhoto | null>(null);
   const mountedRef = useRef(true);
   const operationRef = useRef(0);
@@ -83,6 +96,10 @@ export function ResponsePhotoPreparation({
     const operation = ++operationRef.current;
     setProcessing(true);
     setError("");
+    setTranscript("");
+    setUncertainSegments([]);
+    setEditingTranscript(false);
+    setExtractionAttempted(false);
     setStatus("Preparing photo locally...");
     try {
       const prepared = await processPhoto(file, transform);
@@ -101,9 +118,9 @@ export function ResponsePhotoPreparation({
       }
       storePhoto(prepared);
       setStatus(
-        "Photo ready. Type the response exactly as it appears, then confirm the transcript.",
+        "Photo ready. Review it, then choose Read handwriting when you are ready to send the prepared copy.",
       );
-      window.setTimeout(() => transcriptRef.current?.focus(), 0);
+      window.setTimeout(() => readButtonRef.current?.focus(), 0);
     } catch (cause) {
       if (!mountedRef.current || operation !== operationRef.current) return;
       setError(
@@ -138,6 +155,9 @@ export function ResponsePhotoPreparation({
     operationRef.current += 1;
     if (!clearCurrentPhoto()) return;
     setTranscript("");
+    setUncertainSegments([]);
+    setEditingTranscript(false);
+    setExtractionAttempted(false);
     setError("");
     setStatus("");
     fileInputRef.current?.click();
@@ -147,6 +167,9 @@ export function ResponsePhotoPreparation({
     operationRef.current += 1;
     if (!clearCurrentPhoto()) return;
     setTranscript("");
+    setUncertainSegments([]);
+    setEditingTranscript(false);
+    setExtractionAttempted(false);
     setError("");
     setStatus("Photo discarded. Choose another photo or type the response.");
   };
@@ -158,10 +181,45 @@ export function ResponsePhotoPreparation({
     onUseTypedEntry();
   };
 
-  const confirmTranscript = () => {
+  const readHandwriting = async () => {
+    const current = photoRef.current;
+    if (!current || processing || extracting) return;
+    const operation = ++operationRef.current;
+    setExtracting(true);
+    setExtractionAttempted(true);
+    setError("");
+    setStatus("Reading handwriting...");
+    try {
+      const result = await transcribePhoto(current.blob);
+      if (!mountedRef.current || operation !== operationRef.current) return;
+      setTranscript(result.transcript);
+      setUncertainSegments(result.uncertainSegments);
+      setEditingTranscript(false);
+      setStatus(
+        "Handwriting read. Check the extracted text before requesting feedback.",
+      );
+      window.setTimeout(() => extractedHeadingRef.current?.focus(), 0);
+    } catch {
+      if (!mountedRef.current || operation !== operationRef.current) return;
+      setTranscript("");
+      setUncertainSegments([]);
+      setEditingTranscript(false);
+      setStatus("");
+      setError(
+        "The handwriting could not be read right now. Try again, type it yourself, or retake the photo.",
+      );
+      window.setTimeout(() => retryButtonRef.current?.focus(), 0);
+    } finally {
+      if (mountedRef.current && operation === operationRef.current) {
+        setExtracting(false);
+      }
+    }
+  };
+
+  const confirmTranscript = async () => {
     const confirmed = transcript.trim();
     if (!confirmed) {
-      setError("Type the response from the photo before confirming it.");
+      setError("Enter the response before requesting feedback.");
       transcriptRef.current?.focus();
       return;
     }
@@ -172,7 +230,16 @@ export function ResponsePhotoPreparation({
     }
     operationRef.current += 1;
     if (!clearCurrentPhoto()) return;
-    onConfirmTranscript(confirmed);
+    await onConfirmTranscript(confirmed);
+  };
+
+  const startManualEntry = () => {
+    setTranscript("");
+    setUncertainSegments([]);
+    setEditingTranscript(true);
+    setError("");
+    setStatus("Type the response while comparing it with the photo.");
+    window.setTimeout(() => transcriptRef.current?.focus(), 0);
   };
 
   const trim = photo
@@ -194,14 +261,14 @@ export function ResponsePhotoPreparation({
         Prepare one response photo
       </h2>
       <p className="response-photo__privacy">
-        Your photo is processed temporarily on this device and is not saved or
-        uploaded. It is discarded when you confirm, discard, or leave this
-        review.
+        Choosing, rotating, and trimming stay on this device. Only when you
+        choose Read handwriting is the prepared copy sent securely for
+        transcription. It is not saved by this app and is discarded when you
+        continue, retake, discard, or leave this review.
       </p>
       <p>
-        Automatic handwriting transcription is not enabled yet. After the photo
-        is ready, type what it says and confirm the transcript before requesting
-        feedback.
+        Check the extracted text before feedback so handwriting mistakes do not
+        lead to unfair coaching.
       </p>
       <label className="response-photo__picker" htmlFor="response-photo-file">
         Choose one response photo
@@ -212,13 +279,13 @@ export function ResponsePhotoPreparation({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         capture="environment"
-        disabled={processing}
+        disabled={processing || extracting}
         onChange={(event) => void selectPhoto(event)}
       />
       <p className="muted">JPEG, PNG, or WebP. One image, up to 8 MB.</p>
-      {processing && (
+      {(processing || extracting) && (
         <p className="response-status" role="status" aria-live="polite">
-          Preparing photo locally...
+          {extracting ? "Reading handwriting..." : "Preparing photo locally..."}
         </p>
       )}
       {error && (
@@ -226,7 +293,7 @@ export function ResponsePhotoPreparation({
           {error}
         </p>
       )}
-      {!processing && status && (
+      {!processing && !extracting && status && (
         <p className="response-status" role="status" aria-live="polite">
           {status}
         </p>
@@ -242,7 +309,7 @@ export function ResponsePhotoPreparation({
             <button
               type="button"
               className="secondary-button"
-              disabled={processing}
+              disabled={processing || extracting}
               onClick={() => void transformCurrent({ rotation: 90 })}
             >
               Rotate right
@@ -250,62 +317,141 @@ export function ResponsePhotoPreparation({
             <button
               type="button"
               className="secondary-button"
-              disabled={processing || !trim}
+              disabled={processing || extracting || !trim}
               onClick={() => trim && void transformCurrent({ crop: trim })}
             >
               Trim edges
             </button>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={processing}
-              onClick={chooseAnother}
-            >
-              Choose another photo
-            </button>
+            {!transcript && !extractionAttempted && (
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={processing || extracting}
+                onClick={chooseAnother}
+              >
+                Choose another photo
+              </button>
+            )}
             <button
               type="button"
               className="text-button"
-              disabled={processing}
+              disabled={processing || extracting}
               onClick={discard}
             >
               Discard photo
             </button>
           </div>
-          <label htmlFor="provisional-transcript">Provisional transcript</label>
-          <textarea
-            ref={transcriptRef}
-            id="provisional-transcript"
-            rows={7}
-            value={transcript}
-            aria-describedby="provisional-transcript-help"
-            aria-invalid={error ? true : undefined}
-            disabled={processing}
-            onChange={(event) => {
-              setTranscript(event.target.value);
-              setError("");
-            }}
-          />
-          <div
-            id="provisional-transcript-help"
-            className="response-editor__meta"
-          >
-            <span>Check this text against the handwritten response.</span>
-            <span>{transcript.length.toLocaleString()} / 4,000</span>
-          </div>
-          <div className="response-photo__actions">
+          {!transcript && !editingTranscript && !extractionAttempted && (
             <button
+              ref={readButtonRef}
               type="button"
               className="primary-button"
-              disabled={processing}
-              onClick={confirmTranscript}
+              disabled={processing || extracting}
+              onClick={() => void readHandwriting()}
             >
-              Confirm transcript
+              {extracting ? "Reading handwriting..." : "Read handwriting"}
             </button>
+          )}
+          {(transcript || editingTranscript) && (
+            <div aria-labelledby="extracted-transcript-heading">
+              <h3
+                ref={extractedHeadingRef}
+                id="extracted-transcript-heading"
+                tabIndex={-1}
+              >
+                Check the extracted text
+              </h3>
+              <label htmlFor="provisional-transcript">
+                {extractionAttempted
+                  ? "Extracted response"
+                  : "Student response"}
+              </label>
+              <textarea
+                ref={transcriptRef}
+                id="provisional-transcript"
+                rows={7}
+                value={transcript}
+                readOnly={!editingTranscript}
+                aria-describedby="provisional-transcript-help"
+                aria-invalid={error ? true : undefined}
+                disabled={processing || extracting}
+                onChange={(event) => {
+                  setTranscript(event.target.value);
+                  setError("");
+                }}
+              />
+              <div
+                id="provisional-transcript-help"
+                className="response-editor__meta"
+              >
+                <span>Compare this text with the handwritten response.</span>
+                <span>{transcript.length.toLocaleString()} / 4,000</span>
+              </div>
+              {uncertainSegments.length > 0 && (
+                <p className="muted">
+                  Double-check: {uncertainSegments.join("; ")}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="response-photo__actions">
+            {transcript && (
+              <button
+                type="button"
+                className="primary-button"
+                disabled={processing || extracting}
+                onClick={() => void confirmTranscript()}
+              >
+                Looks right — get feedback
+              </button>
+            )}
+            {transcript && !editingTranscript && (
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={processing || extracting}
+                onClick={() => {
+                  setEditingTranscript(true);
+                  window.setTimeout(() => transcriptRef.current?.focus(), 0);
+                }}
+              >
+                Edit text
+              </button>
+            )}
+            {(transcript || extractionAttempted) && (
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={processing || extracting}
+                onClick={chooseAnother}
+              >
+                Retake photo
+              </button>
+            )}
+            {extractionAttempted && !transcript && (
+              <button
+                ref={retryButtonRef}
+                type="button"
+                className="secondary-button"
+                disabled={processing || extracting}
+                onClick={() => void readHandwriting()}
+              >
+                Try reading again
+              </button>
+            )}
+            {extractionAttempted && !transcript && !editingTranscript && (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={startManualEntry}
+              >
+                Type it myself
+              </button>
+            )}
             <button
               type="button"
               className="secondary-button"
-              disabled={processing}
+              disabled={processing || extracting}
               onClick={useTypedEntry}
             >
               Type the response instead

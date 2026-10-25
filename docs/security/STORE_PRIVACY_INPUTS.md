@@ -1,13 +1,16 @@
 # Store and privacy-review inputs
 
-Last reviewed 2026-10-19. These are factual implementation inputs for the owner, store forms, and qualified counsel. They are not completed legal declarations.
+Last reviewed 2026-10-25. These are factual implementation inputs for the owner, store forms, and qualified counsel. They are not completed legal declarations.
 
 ## Product facts
 
 - The product is operated by a parent or other adult to create a child's printable reading worksheet.
 - It supports profiles from early elementary through adult readers and stores a child name plus reading attributes locally on the device.
-- It has no child account, sign-in, social feature, advertising, analytics, location, contacts, camera, microphone, or tracking SDK.
+- It has no child account, sign-in, social feature, advertising, analytics, location, contacts, microphone, or tracking SDK. The optional photo workflow uses the system file/camera picker without a direct camera plugin or broad gallery permission.
 - Real-AI generation sends reading attributes, book metadata, selected skills, and optional free-text parent notes through the hosted relay to OpenAI. The dedicated network payload excludes the child name and local record identifiers.
+- Response coaching can use typed text or one optional answer photo. Photo selection, rotation, cropping, resizing, and JPEG re-encoding occur in device memory. The prepared JPEG is transmitted only after the user explicitly chooses `Read handwriting`.
+- The handwriting request excludes the child profile, child name, local IDs, book metadata, worksheet prompt, parent notes, and response history. In approved live mode, the hosted relay sends the prepared JPEG to OpenAI for transcription. The checked transcript, not the image, is sent separately for feedback.
+- The application does not save response photos, transcripts, or coaching results to its local canonical record or an application database. Host and provider retention remain release-policy questions even though API requests set `store: false` and the application uses content-free logs.
 - Data is encrypted in transit when the production service is served exclusively over HTTPS. Local browser storage and user-downloaded backups are not application-encrypted.
 - Local data is user-deletable. Historical worksheet snapshots intentionally retain the profile values used at generation time until the worksheet is deleted.
 - The application does not currently offer a cloud account or retain an application database from which an operator can fulfill a server-side deletion request.
@@ -21,6 +24,9 @@ Last reviewed 2026-10-19. These are factual implementation inputs for the owner,
 - Zero Data Retention approval and project configuration. OpenAI's under-18 guidance makes this a real-AI gate for personal data of children under 13 or the applicable digital-consent age.
 - Final retention periods, data-subject/parent request process, incident contact, and policy wording.
 - Whether book titles, optional free-text notes, or reading attributes are categorized as user content, identifiers, sensitive information, or linked data in each store's current form.
+- How each store form classifies student-authored response text and optional answer images, including off-device transmission through the hosted relay to OpenAI.
+- Whether the just-in-time image disclosure and consent flow are sufficient for the selected age bands and jurisdictions.
+- Whether native image transcription will remain unavailable at launch or ship only after server-verified device attestation is accepted.
 
 ## Apple review worksheet
 
@@ -28,6 +34,7 @@ Apple requires App Store Connect privacy details to cover the app and integrated
 
 - Name: stored locally and excluded from the P03 network payload.
 - Other user content: parent summary and notes are collected by the relay/OpenAI for app functionality when real AI is enabled.
+- Photos or videos and other user content: one optional answer image and its student-authored text are transmitted for handwriting transcription and response coaching only when live transcription is approved and enabled. The owner must classify these fields using the current App Store definitions.
 - Other data: reading profile attributes, book metadata, progress, and selected skills are collected for app functionality.
 - Tracking: none implemented.
 - Data linked to identity: no account or persistent server identity exists, but the owner must decide the form response using Apple's current definitions and final hosting metadata.
@@ -41,8 +48,10 @@ Google treats off-device transmission as collection for its Data safety form, in
 - User IDs: none generated for a cloud account; local record IDs are not transmitted.
 - Personal info/name: local only in the implemented request contract; reconfirm with captured deployed network traffic.
 - App activity/other user-generated content: parent notes, summaries, reading metadata, and prompt inputs are transmitted for app functionality in real-AI mode.
+- Photos and videos/other user-generated content: one optional prepared answer image is transmitted for handwriting transcription only after explicit user action in approved live mode; the confirmed text is transmitted separately for feedback.
 - Encryption in transit: yes only after deployed HTTPS verification.
 - Deletion: local deletion is available; there is no account or application database. Provider/host retention still requires an accurate policy answer.
+- Security practice: live native image transcription remains disabled until the server can verify device attestation; an app origin alone is not treated as identity.
 - Ads and analytics: none.
 
 If any target-audience age group includes children, Google Play Families requirements apply and the store answers must disclose relevant collection. Source: [Google Play Data safety](https://support.google.com/googleplay/android-developer/answer/10787469) and [Families Policy Requirements](https://support.google.com/googleplay/android-developer/answer/9893335).

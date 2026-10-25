@@ -23,6 +23,10 @@ interface ResponseReviewProps {
     file: File,
     transform?: ResponsePhotoTransform,
   ) => Promise<ProcessedResponsePhoto>;
+  transcribePhoto?: (image: Blob) => Promise<{
+    transcript: string;
+    uncertainSegments: string[];
+  }>;
 }
 
 const UNAVAILABLE_MESSAGE =
@@ -33,6 +37,7 @@ export function ResponseReview({
   prompt,
   onDone,
   processPhoto = processResponsePhoto,
+  transcribePhoto,
 }: ResponseReviewProps) {
   const [responseText, setResponseText] = useState("");
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
@@ -50,22 +55,24 @@ export function ResponseReview({
     };
   }, []);
 
-  const submit = async (event?: FormEvent) => {
-    event?.preventDefault();
-    if (reviewing || photoMode) return;
+  const requestFeedback = async (
+    text: string,
+    options: { fromPhoto?: boolean } = {},
+  ) => {
+    if (reviewing || (photoMode && !options.fromPhoto)) return;
 
     let input;
     try {
       input = toNetworkAnswerFeedbackInput({
         prompt,
         childSnapshot,
-        responseText,
+        responseText: text,
       });
     } catch {
       setError(
-        responseText.trim().length === 0
+        text.trim().length === 0
           ? "Enter the response before requesting feedback"
-          : responseText.trim().length > 4000
+          : text.trim().length > 4000
             ? "Keep the response under 4,000 characters"
             : "Check the response and try again",
       );
@@ -95,6 +102,11 @@ export function ResponseReview({
     }
   };
 
+  const submit = async (event?: FormEvent) => {
+    event?.preventDefault();
+    await requestFeedback(responseText);
+  };
+
   return (
     <main className="page response-review" tabIndex={-1}>
       <button type="button" className="back-button" onClick={onDone}>
@@ -121,19 +133,20 @@ export function ResponseReview({
       {photoMode && (
         <ResponsePhotoPreparation
           processPhoto={processPhoto}
+          {...(transcribePhoto ? { transcribePhoto } : {})}
           onUseTypedEntry={() => {
             setPhotoMode(false);
             window.setTimeout(() => responseRef.current?.focus(), 0);
           }}
-          onConfirmTranscript={(transcript) => {
+          onConfirmTranscript={async (transcript) => {
             setResponseText(transcript);
             setFeedback(null);
             setError("");
             setPhotoMode(false);
             setTranscriptNotice(
-              "Transcript confirmed. Review it below, then choose Get feedback when you are ready.",
+              "Transcript confirmed. Only the checked text was sent for feedback.",
             );
-            window.setTimeout(() => responseRef.current?.focus(), 0);
+            await requestFeedback(transcript, { fromPhoto: true });
           }}
         />
       )}

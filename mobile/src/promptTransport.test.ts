@@ -51,6 +51,12 @@ const feedbackInit: RequestInit = {
   body: JSON.stringify(feedbackRequest),
 };
 
+const transcriptionInit: RequestInit = {
+  method: "POST",
+  headers: { "X-Installation-Token": "00000000-0000-4000-8000-000000000000" },
+  body: new FormData(),
+};
+
 async function validBatch() {
   return new MockPromptGenerator().generate({
     ...request,
@@ -126,6 +132,86 @@ describe("createMobilePromptFetch", () => {
       "https://api.example.com/api/feedback",
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
+  });
+
+  it("routes transcription to the sibling hosted endpoint and preserves valid output", async () => {
+    const hosted = Response.json({
+      transcription: {
+        transcript: "The character changed their mind.",
+        uncertainSegments: [],
+      },
+      provider: "openai",
+      fallback: false,
+    });
+    const realFetch = vi.fn(async () => hosted);
+    const mobileFetch = createMobilePromptFetch(
+      realFetch,
+      "https://api.example.com/api/prompts",
+    );
+
+    expect(await mobileFetch("/api/transcriptions", transcriptionInit)).toBe(
+      hosted,
+    );
+    expect(realFetch).toHaveBeenCalledWith(
+      "https://api.example.com/api/transcriptions",
+      expect.objectContaining({
+        body: transcriptionInit.body,
+        headers: transcriptionInit.headers,
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+
+  it.each([
+    ["request rejection", () => Promise.reject(new Error("offline"))],
+    [
+      "non-2xx response",
+      () => Promise.resolve(new Response("no", { status: 503 })),
+    ],
+    ["invalid JSON", () => Promise.resolve(new Response("not-json"))],
+    [
+      "invalid schema",
+      () =>
+        Promise.resolve(
+          Response.json({
+            transcription: { transcript: "Invented", uncertainSegments: [] },
+            provider: "mock",
+            fallback: true,
+          }),
+        ),
+    ],
+  ])(
+    "returns an honest unavailable transcription after %s",
+    async (_name, outcome) => {
+      const mobileFetch = createMobilePromptFetch(
+        vi.fn(outcome),
+        "https://api.example.com/api/prompts",
+      );
+
+      const response = await mobileFetch(
+        "/api/transcriptions",
+        transcriptionInit,
+      );
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({
+        code: "transcription_unavailable",
+        message:
+          "Automatic handwriting reading is unavailable right now. Type the response instead.",
+      });
+    },
+  );
+
+  it("returns unavailable without a hosted endpoint and never fabricates a transcript", async () => {
+    const realFetch = vi.fn();
+    const mobileFetch = createMobilePromptFetch(realFetch, undefined);
+
+    const response = await mobileFetch(
+      "/api/transcriptions",
+      transcriptionInit,
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).not.toHaveProperty("transcription");
+    expect(realFetch).not.toHaveBeenCalled();
   });
 
   it.each([

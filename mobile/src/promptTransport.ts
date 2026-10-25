@@ -8,6 +8,7 @@ import {
   networkGenerationInputSchema,
   promptBatchSchema,
 } from "../../src/domain/schemas";
+import { handwritingTranscriptionResultSchema } from "../../src/domain/handwritingTranscription";
 import { z } from "zod";
 
 const GENERAL_FALLBACK_NOTICE = "Offline mode used reliable general prompts.";
@@ -15,6 +16,8 @@ const NOTES_FALLBACK_NOTICE =
   "Offline mode used your supplied summary and notes on this device.";
 const FEEDBACK_FALLBACK_NOTICE =
   "Response coaching was unavailable, so reliable general feedback was used instead.";
+const TRANSCRIPTION_UNAVAILABLE_MESSAGE =
+  "Automatic handwriting reading is unavailable right now. Type the response instead.";
 
 const answerFeedbackResultSchema = z
   .object({
@@ -63,7 +66,10 @@ async function deterministicFeedbackFallback(init?: RequestInit) {
   });
 }
 
-function feedbackApiFromPromptApi(configuredApi: string): string | undefined {
+function siblingApiFromPromptApi(
+  configuredApi: string,
+  route: "feedback" | "transcriptions",
+): string | undefined {
   try {
     const url = new URL(configuredApi);
     if (
@@ -76,11 +82,21 @@ function feedbackApiFromPromptApi(configuredApi: string): string | undefined {
     ) {
       return undefined;
     }
-    url.pathname = `${url.pathname.slice(0, -"prompts".length)}feedback`;
+    url.pathname = `${url.pathname.slice(0, -"prompts".length)}${route}`;
     return url.href;
   } catch {
     return undefined;
   }
+}
+
+function transcriptionUnavailableResponse() {
+  return Response.json(
+    {
+      code: "transcription_unavailable",
+      message: TRANSCRIPTION_UNAVAILABLE_MESSAGE,
+    },
+    { status: 503 },
+  );
 }
 
 export function createMobilePromptFetch(
@@ -97,11 +113,17 @@ export function createMobilePromptFetch(
           : input.url;
     const isPromptRequest = url === "/api/prompts";
     const isFeedbackRequest = url === "/api/feedback";
-    if (!isPromptRequest && !isFeedbackRequest) return realFetch(input, init);
+    const isTranscriptionRequest = url === "/api/transcriptions";
+    if (!isPromptRequest && !isFeedbackRequest && !isTranscriptionRequest) {
+      return realFetch(input, init);
+    }
 
     const hostedApi = isFeedbackRequest
-      ? configuredApi && feedbackApiFromPromptApi(configuredApi)
-      : configuredApi;
+      ? configuredApi && siblingApiFromPromptApi(configuredApi, "feedback")
+      : isTranscriptionRequest
+        ? configuredApi &&
+          siblingApiFromPromptApi(configuredApi, "transcriptions")
+        : configuredApi;
 
     if (hostedApi) {
       const timeoutController = new AbortController();
@@ -121,6 +143,8 @@ export function createMobilePromptFetch(
         const body: unknown = await response.clone().json();
         if (isFeedbackRequest) {
           answerFeedbackResultSchema.parse(body);
+        } else if (isTranscriptionRequest) {
+          handwritingTranscriptionResultSchema.parse(body);
         } else {
           promptBatchSchema.parse(body);
         }
@@ -133,8 +157,8 @@ export function createMobilePromptFetch(
       }
     }
 
-    return isFeedbackRequest
-      ? deterministicFeedbackFallback(init)
-      : deterministicFallback(init);
+    if (isFeedbackRequest) return deterministicFeedbackFallback(init);
+    if (isTranscriptionRequest) return transcriptionUnavailableResponse();
+    return deterministicFallback(init);
   };
 }
