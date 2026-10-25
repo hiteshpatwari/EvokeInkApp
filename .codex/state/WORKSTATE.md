@@ -101,14 +101,17 @@ and live image-provider processing remain disabled.
 - Live transcription/feedback adapters remain disabled pending privacy/store
   approval, retention review, budget controls, controlled web acceptance, and
   native device attestation.
-- This phase has not been deployed to the public Worker or installed on a
-  physical Android device in this turn.
-- The S24 Ultra was not visible in `adb devices`, so physical camera/gallery
-  capture, installation, and device cleanup acceptance remain unverified.
+- This phase has not been deployed to the public Worker.
+- The Phase 2 debug APK was installed successfully on the S24 Ultra over ADB at
+  `192.168.1.110:46369`. Package `app.readreflect.mobile` reports version 1.0,
+  versionCode 1, and `MainActivity` resumed successfully. A device screenshot
+  confirmed the existing profile and saved worksheet rendered; startup logcat
+  showed no fatal/runtime crash. Physical camera/gallery capture and cleanup
+  acceptance still require user interaction on the device.
 
 ## Immediate next action
 
-Reconnect the S24 Ultra with wireless debugging, install the refreshed APK, and
-run a physical camera/gallery acceptance pass. After device acceptance, Phase 3 may
-add disabled real transcription/feedback adapters; do not activate image or
-child-authored text processing until every external release gate passes.
+Run the physical camera/gallery acceptance pass on the connected S24 Ultra.
+After device acceptance, Phase 3 may add disabled real transcription/feedback
+adapters; do not activate image or child-authored text processing until every
+external release gate passes.
