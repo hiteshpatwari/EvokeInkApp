@@ -825,10 +825,18 @@ export function AppShell({ storage }: AppShellProps = {}) {
           <strong>Read &amp; Reflect</strong>
         </button>
         <nav aria-label="Main navigation">
-          <button type="button" onClick={goHome}>
+          <button
+            type="button"
+            aria-current={screen === "home" ? "page" : undefined}
+            onClick={goHome}
+          >
             Home
           </button>
-          <button type="button" onClick={() => setScreen("saved")}>
+          <button
+            type="button"
+            aria-current={screen === "saved" ? "page" : undefined}
+            onClick={() => setScreen("saved")}
+          >
             Saved reflections
           </button>
         </nav>

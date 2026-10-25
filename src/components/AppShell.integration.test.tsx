@@ -41,6 +41,20 @@ describe("Read & Reflect workflow", () => {
     vi.stubGlobal("fetch", mockSuccessfulGeneration());
   });
 
+  it("identifies the active top-level destination", async () => {
+    const user = userEvent.setup();
+    render(<AppShell />);
+
+    const home = await screen.findByRole("button", { name: "Home" });
+    const saved = screen.getByRole("button", { name: "Saved reflections" });
+    expect(home).toHaveAttribute("aria-current", "page");
+    expect(saved).not.toHaveAttribute("aria-current");
+
+    await user.click(saved);
+    expect(saved).toHaveAttribute("aria-current", "page");
+    expect(home).not.toHaveAttribute("aria-current");
+  });
+
   it("uses native Back to return from application screens without exiting", async () => {
     const repository = createLocalRepository(localStorage);
     repository.saveProfile({

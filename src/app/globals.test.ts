@@ -32,19 +32,17 @@ describe("mobile viewport safety", () => {
     expect(nativeTopbarRule).toContain("top: 0");
   });
 
-  it("allows native navigation and hero text to reflow at large text sizes", () => {
-    const responsiveNavigationRule = styles
+  it("keeps native navigation compact while allowing hero text to reflow", () => {
+    const responsiveNavigationRules = styles
       .match(/html\[data-native-app="true"\] \.topbar nav\s*\{[^}]+\}/gs)
-      ?.at(-1);
-    expect(responsiveNavigationRule).toContain("flex-direction: column");
-    expect(responsiveNavigationRule).toContain("width: 100%");
+      ?.join("\n");
+    expect(responsiveNavigationRules).toContain("flex-direction: row");
+    expect(responsiveNavigationRules).toContain("width: auto");
     expect(styles).not.toContain("font-size: min(1rem, 2vw)");
     expect(styles).toMatch(
-      /html\[data-native-app="true"\] \.brand-button\s*\{\s*display: none;/s,
+      /html\[data-native-app="true"\] \.brand-button\s*\{[^}]*display: flex;/s,
     );
-    expect(styles).toContain(
-      "padding-top: max(calc(18px + var(--safe-area-top)), 88px)",
-    );
+    expect(styles).toContain("var(--native-safe-area-top-fallback)");
     expect(styles).toContain("overflow-wrap: anywhere");
     expect(styles).toContain('html[data-native-app="true"] .hero-card h1');
     expect(styles).toContain("font-size: min(2.15rem, 10vw)");
