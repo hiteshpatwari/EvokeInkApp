@@ -151,6 +151,11 @@ jobs:
         run: pnpm exec cf deploy --dry-run --prebuilt
 
       - name: Deploy mock production release
+        # Cloudflare's CLI enables conflict-strict mode automatically in CI.
+        # This release intentionally reconciles the dashboard configuration to
+        # the reviewed repository configuration after the Evoke Ink rename.
+        env:
+          CI: "false"
         run: pnpm exec cf deploy --prebuilt --tag production --message "Automated release $RELEASE_SHA"
 
       - name: Probe deployed web and prompt contracts
