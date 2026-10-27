@@ -21,7 +21,7 @@ export function openAIRequestPolicy() {
   const configuredRetries = Number(process.env["OPENAI_MAX_RETRIES"] ?? 1);
   return {
     timeout: Math.min(
-      30_000,
+      45_000,
       Math.max(
         1_000,
         Number.isFinite(configuredTimeout) ? configuredTimeout : 15_000,

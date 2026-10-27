@@ -78,7 +78,7 @@ describe("openAIRequestPolicy", () => {
     process.env["OPENAI_TIMEOUT_MS"] = "999999";
     process.env["OPENAI_MAX_RETRIES"] = "99";
     expect(openAIRequestPolicy()).toEqual({
-      timeout: 30_000,
+      timeout: 45_000,
       maxRetries: 2,
       maxOutputTokens: 2_500,
     });
