@@ -100,6 +100,10 @@ the public home, health, and prompt contracts.
 - `Quality` now runs for pull requests and manual dispatch only. Direct `main`
   pushes use the stricter Release Automation gate, avoiding a redundant second
   full test/build run and conflicting status signal.
+- `docs/RELEASE_AUTOMATION.md` now contains operator-grade setup sections for a
+  dedicated OpenAI project/key, Cloudflare Worker secret storage, the separate
+  reviewed OpenAI activation gate, a least-privilege Cloudflare deployment
+  token, GitHub secret/variable entry, verification, and rollback.
 - Vinext/Cloudflare production build and `cf deploy --dry-run --prebuilt`
   passed in mock mode.
 - Mobile production build passed using the current public Worker prompt URL;
