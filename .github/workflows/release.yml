@@ -115,6 +115,9 @@ jobs:
     timeout-minutes: 20
     environment: production
     env:
+      AI_PROVIDER: openai
+      AI_MONTHLY_BUDGET_USD: "2.70"
+      APP_ALLOWED_ORIGINS: https://evoke-ink-app.hiteshpatwari.workers.dev
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       RELEASE_SHA: ${{ github.sha }}
@@ -150,7 +153,7 @@ jobs:
       - name: Validate Cloudflare deployment bundle
         run: pnpm exec cf deploy --dry-run --prebuilt
 
-      - name: Deploy mock production release
+      - name: Deploy production release
         run: pnpm exec cf deploy --prebuilt --tag production --message "Automated release $RELEASE_SHA"
 
       - name: Probe deployed web and prompt contracts
@@ -159,3 +162,4 @@ jobs:
           ./scripts/Invoke-SyntheticProbe.ps1
           -BaseUrl $env:PRODUCTION_ORIGIN
           -AllowedOrigin $env:PRODUCTION_ORIGIN
+          -ExpectedProvider openai

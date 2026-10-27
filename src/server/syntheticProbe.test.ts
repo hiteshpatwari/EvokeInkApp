@@ -9,7 +9,7 @@ function json(body: unknown, status = 200, headers = {}) {
 }
 
 describe("synthetic production probe", () => {
-  it("passes only the web, no-store health, and deterministic mock prompt contract", async () => {
+  it("passes only the web, no-store health, and expected prompt provider contract", async () => {
     const fetcher = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response("ok", { status: 200 }))
@@ -52,6 +52,43 @@ describe("synthetic production probe", () => {
     expect(JSON.stringify(fetcher.mock.calls)).not.toMatch(
       /Aavya|Prince Caspian|parent notes/i,
     );
+  });
+
+  it("can require a live OpenAI response without accepting fallback output", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }))
+      .mockResolvedValueOnce(
+        json({ status: "ok" }, 200, { "cache-control": "no-store" }),
+      )
+      .mockResolvedValueOnce(
+        json(
+          {
+            prompts: Array.from({ length: 4 }, (_, index) => ({
+              text: "Explain one idea using evidence from the reading.",
+              skill: "inference",
+              explanation: "Practices evidence-based inference.",
+              required: index < 3,
+              suggestedResponseLength: "2-3 sentences",
+              grounding: "generic",
+              difficultyLevel: "grade_level",
+            })),
+            provider: "openai",
+            fallback: false,
+          },
+          200,
+          { "cache-control": "no-store" },
+        ),
+      );
+
+    await expect(
+      runSyntheticProbe(
+        "https://read.example",
+        "https://read.example",
+        fetcher,
+        "openai",
+      ),
+    ).resolves.toMatchObject({ ok: true, prompt: true, errors: [] });
   });
 
   it("returns bounded machine-readable failures without response content", async () => {

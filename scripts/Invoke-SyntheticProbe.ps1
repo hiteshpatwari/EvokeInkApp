@@ -6,7 +6,10 @@ param(
 
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^https?://[^/]+$')]
-    [string]$AllowedOrigin
+    [string]$AllowedOrigin,
+
+    [ValidateSet('mock', 'openai')]
+    [string]$ExpectedProvider = 'mock'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -83,7 +86,7 @@ try {
         @($promptBody.prompts).Count -eq 4 -and
         $validPromptCount -eq 4 -and
         $requiredCount -eq 3 -and
-        $promptBody.provider -eq 'mock' -and
+        $promptBody.provider -eq $ExpectedProvider -and
         $promptBody.fallback -eq $false
     if (-not $result.prompt) { Add-ProbeError 'prompt_contract_failed' }
 } catch {

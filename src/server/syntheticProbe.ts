@@ -50,6 +50,7 @@ export async function runSyntheticProbe(
   rawBaseUrl: string,
   allowedOrigin: string,
   fetcher: typeof fetch = fetch,
+  expectedProvider: "mock" | "openai" = "mock",
 ): Promise<SyntheticProbeResult> {
   const baseUrl = new URL(rawBaseUrl);
   if (
@@ -108,7 +109,7 @@ export async function runSyntheticProbe(
       body.prompts.every(isPrompt) &&
       body.prompts.filter((prompt) => isPrompt(prompt) && prompt.required)
         .length === 3 &&
-      body.provider === "mock" &&
+      body.provider === expectedProvider &&
       body.fallback === false;
     if (!result.prompt) result.errors.push("prompt_contract_failed");
   } catch {

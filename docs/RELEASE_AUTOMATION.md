@@ -82,24 +82,22 @@ Do not add the optional handwriting-transcription secrets or enable
 `HANDWRITING_TRANSCRIPTION_PROVIDER=openai` yet. Live image transcription has
 separate approval, quota, privacy, retention, and native-attestation gates.
 
-### Enable OpenAI only after the web-only review
+### Web-only OpenAI activation
 
-Adding the secrets is safe preparation. Activation requires a reviewed code
-change because `.github/workflows/release.yml` deliberately fixes
-`AI_PROVIDER=mock` and currently includes native origins. Before activation:
+The reviewed production release uses `AI_PROVIDER=openai`, a $2.70 application
+budget, and the exact deployed web origin. Native origins remain excluded until
+verified device attestation exists. For each release:
 
-1. Change the release environment to `AI_PROVIDER=openai`.
-2. Set `APP_ALLOWED_ORIGINS` to the exact production web origin only. Remove
-   `https://localhost` and `capacitor://localhost`; native OpenAI traffic is
-   rejected until verified device attestation exists.
-3. Set `AI_MONTHLY_BUDGET_USD`, `AI_INSTALLATION_MONTHLY_LIMIT`, and
-   `AI_IP_MONTHLY_LIMIT` to the approved launch limits.
-4. Deploy one reviewed release and send one synthetic request containing no
+1. Keep `APP_ALLOWED_ORIGINS` restricted to the exact production web origin.
+2. Keep the application budget and installation/IP limits no higher than the
+   approved provider controls.
+3. Deploy the reviewed release and send one synthetic request containing no
    child name, notes, response, or other personal information.
-5. Confirm the response metadata reports the expected provider, inspect the
+4. Confirm the response metadata reports `provider: openai` and
+   `fallback: false`, inspect the
    OpenAI project usage, and verify that browser and Android assets contain no
    key.
-6. If verification fails, restore `AI_PROVIDER=mock` immediately. Follow
+5. If verification fails, restore `AI_PROVIDER=mock` immediately. Follow
    `docs/security/INCIDENT_AND_KEY_ROTATION.md` if a key may have been exposed.
 
 ## 2. Add Cloudflare account details
