@@ -44,9 +44,15 @@ describe("Evoke Ink workflow", () => {
   it("identifies the product as Evoke Ink", async () => {
     render(<AppShell />);
 
-    expect(
-      await screen.findByRole("button", { name: "Evoke Ink" }),
-    ).toBeInTheDocument();
+    const brand = await screen.findByRole("button", { name: "Evoke Ink" });
+    expect(brand).toBeInTheDocument();
+    expect(brand.querySelector(".brand-mark svg")).not.toHaveAttribute(
+      "aria-hidden",
+    );
+    expect(brand.querySelector(".brand-mark")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 
   it("identifies the active top-level destination", async () => {

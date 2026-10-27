@@ -127,11 +127,9 @@ html[data-native-app="true"] .topbar {
   top: 0;
   z-index: 60;
 }
-html[data-native-app="true"] .brand-button span {
+html[data-native-app="true"] .brand-mark {
   -webkit-text-size-adjust: none;
-  font-size: 10px;
   height: 3.5em;
-  overflow: hidden;
   text-size-adjust: none;
   width: 3.5em;
 }
@@ -151,17 +149,32 @@ html[data-native-app="true"] .topbar nav button {
   display: flex;
   gap: 11px;
 }
-.brand-button span {
+.brand-mark {
   align-items: center;
   background: var(--primary);
   border-radius: 10px;
-  color: white;
   display: inline-flex;
-  font-family:
-    Charter, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   height: 38px;
   justify-content: center;
+  overflow: hidden;
   width: 38px;
+}
+.brand-mark svg {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+.brand-mark__page {
+  fill: #fffdf9;
+}
+.brand-mark__ink {
+  fill: none;
+  stroke: #c47a18;
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+.brand-mark__spark {
+  fill: #e5a43e;
 }
 .brand-button strong {
   font-family:
@@ -220,7 +233,7 @@ html[data-native-app="true"] .topbar nav button {
 .page--review {
   max-width: 980px;
 }
-.page-intro--library {
+.page-intro.page-intro--library {
   background: linear-gradient(135deg, var(--primary-soft), #f7edd9 78%);
   border: 1px solid var(--line);
   border-radius: 30px;
@@ -228,6 +241,7 @@ html[data-native-app="true"] .topbar nav button {
   overflow: hidden;
   padding: clamp(32px, 5vw, 58px);
   position: relative;
+  max-width: none;
 }
 .page-intro--library::after {
   border: 22px solid rgb(196 122 24 / 10%);

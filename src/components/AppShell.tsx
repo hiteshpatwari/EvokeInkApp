@@ -826,7 +826,19 @@ export function AppShell({ storage }: AppShellProps = {}) {
           aria-label="Evoke Ink"
           onClick={goHome}
         >
-          <span>EI</span>
+          <span className="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" focusable="false">
+              <path
+                className="brand-mark__page"
+                d="M11 35c8-1 15 2 21 9 6-7 13-10 21-9v16c-8-1-15 1-21 7-6-6-13-8-21-7z"
+              />
+              <path className="brand-mark__ink" d="M32 45c-2-9 7-12 4-22" />
+              <path
+                className="brand-mark__spark"
+                d="m38 11 1.8 4.2L44 17l-4.2 1.8L38 23l-1.8-4.2L32 17l4.2-1.8z"
+              />
+            </svg>
+          </span>
           <strong>Evoke Ink</strong>
         </button>
         <nav aria-label="Main navigation">

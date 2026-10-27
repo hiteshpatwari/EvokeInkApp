@@ -134,6 +134,14 @@ serves Evoke Ink branding and the old `read-and-reflect` Worker URL returns 404.
 - Follow-up browser review covered the corrected Saved reflections screen at
   desktop and 375 x 812. The two icon controls, active state, stacked filters,
   contained empty state, and backup panel rendered correctly.
+- Removed the generic 720 px intro cap from the Saved reflections header so it
+  aligns exactly with the library toolbar, cards, and backup panel. Replaced
+  the initials tile and legacy sage favicon with the Evoke Ink open-page,
+  rising-ink, and marigold-spark mark across web and the shared mobile UI.
+- Rendered verification measured the library intro, toolbar, and empty state at
+  1144 px each on desktop and the intro/toolbar at 415 px each at the narrow
+  breakpoint. Narrow navigation retained exactly two icon-only controls with
+  no horizontal overflow; the 38 px logo remained legible.
 - Final UX designer verdict: pass. Final independent code review: pass.
 
 ## Open issues and blockers
