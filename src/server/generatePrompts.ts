@@ -6,7 +6,10 @@ import {
   type GenerationInput,
   type PromptBatch,
 } from "@/domain/schemas";
-import { OpenAIPromptGenerator } from "./openAIPromptGenerator";
+import {
+  OpenAIPromptGenerator,
+  openAIRequestPolicy,
+} from "./openAIPromptGenerator";
 
 export interface GenerationResult extends PromptBatch {
   provider: "mock" | "openai";
@@ -116,7 +119,7 @@ export async function generateWithFallback(
     const parsed = promptBatchSchema.parse(
       await withTimeout(
         primary.generate(input),
-        options.providerTimeoutMs ?? 15_000,
+        options.providerTimeoutMs ?? openAIRequestPolicy().timeout,
       ),
     );
     return {

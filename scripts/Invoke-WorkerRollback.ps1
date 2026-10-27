@@ -51,7 +51,7 @@ if (-not $PSCmdlet.ShouldProcess($expectedTarget, 'route 100 percent to the veri
 }
 
 $versions = ConvertTo-Json @(@{ version_id = $VerifiedVersionId; percentage = 100 }) -Compress
-& pnpm exec cf workers deployments create --worker $WorkerName --versions $versions
+& pnpm exec cf workers deployments create --worker $WorkerName --strategy percentage --versions $versions
 if ($LASTEXITCODE -ne 0) { throw 'rollback deployment failed.' }
 & "$PSScriptRoot/Invoke-SyntheticProbe.ps1" -BaseUrl $ProbeBaseUrl -AllowedOrigin $AllowedOrigin
 if ($LASTEXITCODE -ne 0) { throw 'post-rollback synthetic probe failed.' }

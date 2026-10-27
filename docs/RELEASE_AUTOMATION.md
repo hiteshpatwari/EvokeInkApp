@@ -85,8 +85,9 @@ separate approval, quota, privacy, retention, and native-attestation gates.
 ### Web-only OpenAI activation
 
 The reviewed production release uses `AI_PROVIDER=openai`, a $2.70 application
-budget, and the exact deployed web origin. Native origins remain excluded until
-verified device attestation exists. For each release:
+budget, a 30-second bounded provider timeout, and the exact deployed web origin.
+Native origins remain excluded until verified device attestation exists. For
+each release:
 
 1. Keep `APP_ALLOWED_ORIGINS` restricted to the exact production web origin.
 2. Keep the application budget and installation/IP limits no higher than the

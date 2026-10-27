@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PromptGenerator } from "@/domain/promptGenerator";
 import type { GenerationInput } from "@/domain/schemas";
 import { generateWithFallback } from "./generatePrompts";
@@ -24,6 +24,11 @@ const input: GenerationInput = {
 };
 
 describe("provider fallback", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    delete process.env["OPENAI_TIMEOUT_MS"];
+  });
+
   it("falls back to deterministic prompts when the primary provider fails", async () => {
     const failingProvider: PromptGenerator = {
       generate: async () => {
@@ -47,6 +52,39 @@ describe("provider fallback", () => {
     });
     expect(result.fallback).toBe(true);
     expect(result.notice).toMatch(/not configured/i);
+  });
+
+  it("uses the configured provider timeout for the outer fallback boundary", async () => {
+    vi.useFakeTimers();
+    process.env["OPENAI_TIMEOUT_MS"] = "30000";
+    const slowProvider: PromptGenerator = {
+      generate: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 20_000));
+        return {
+          prompts: Array.from({ length: 4 }, (_, index) => ({
+            text: "Choose one important idea and support it with a detail from the reading.",
+            skill: "evidence_and_explanation",
+            explanation: "Practices explaining evidence from the reading.",
+            required: index < 3,
+            suggestedResponseLength: "3-4 sentences",
+            grounding: "generic" as const,
+            difficultyLevel: "challenging" as const,
+          })),
+        };
+      },
+    };
+
+    const pending = generateWithFallback(input, {
+      providerName: "openai",
+      apiKey: "not-used",
+      primary: slowProvider,
+    });
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    await expect(pending).resolves.toMatchObject({
+      provider: "openai",
+      fallback: false,
+    });
   });
 
   it("re-renders provider output through controlled no-invention templates", async () => {
