@@ -8,7 +8,8 @@ minimal owner action.
 
 ## Current status
 
-Release automation is implemented locally and ready to commit. Every push to
+Release automation is committed on `main` and has passed its hosted quality and
+Android artifact path. Every push to
 `main` receives an independent release quality gate, an Android debug APK build,
 a bundled-secret scan, SHA-256 generation, and a 30-day GitHub artifact. The web
 job becomes automatic after two Cloudflare repository secrets and one enable
@@ -77,6 +78,28 @@ the public home, health, and prompt contracts.
   assembles before scanning, and the corrected order passed locally. Checkout
   and setup-node were also advanced to pinned Node 24 action releases after the
   runner flagged their older Node 20 runtimes.
+- The separate Quality run exposed one timing-sensitive native-persistence
+  assertion under hosted load. Its wait is now bounded at five seconds; the
+  focused test passes locally without changing application behavior.
+- Hosted parallel execution also starved several jsdom/user-event tests. Both
+  CI quality gates now serialize test files on the two-core runner. The full
+  serialized suite passed locally: 49 files and 303 tests in 62 seconds.
+- Hosted jsdom truncated both rapid typing and clipboard simulation in a few
+  setup-only paths, especially under StrictMode. Those paths now seed the form
+  with one atomic change event while a dedicated user-event test retains actual
+  keystroke coverage. The two focused files passed five consecutive runs (35
+  tests total), followed by the full serialized suite (303 tests).
+- The authoritative hosted Release Automation run passed formatting, lint,
+  types, 303 tests, production web build, Android build, bundled-secret scan,
+  SHA generation, and artifact upload. Cloudflare deploy skipped by design
+  because the enable variable and secrets are not configured.
+- Final hosted run `40554862337` passed at commit `4aa8901`. Its 30-day artifact
+  `read-and-reflect-android-4aa890168942c7a91d109b130dab626e50bd79a5`
+  contains a 4,680,030-byte debug APK and SHA file; the downloaded APK hash
+  matched the recorded value exactly.
+- `Quality` now runs for pull requests and manual dispatch only. Direct `main`
+  pushes use the stricter Release Automation gate, avoiding a redundant second
+  full test/build run and conflicting status signal.
 - Vinext/Cloudflare production build and `cf deploy --dry-run --prebuilt`
   passed in mock mode.
 - Mobile production build passed using the current public Worker prompt URL;
@@ -105,6 +128,7 @@ the public home, health, and prompt contracts.
 
 ## Immediate next action
 
-Commit and push the verified release automation, then observe the first GitHub
-run through APK artifact publication. Configure Cloudflare CI credentials once;
-subsequent green `main` commits can deploy and probe without manual commands.
+Configure the two Cloudflare repository secrets and the documented enable
+variable once. Subsequent green `main` commits will deploy and probe without
+manual commands. Store signing/submission and physical-device acceptance remain
+intentional human gates.
