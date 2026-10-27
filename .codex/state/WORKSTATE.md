@@ -9,13 +9,12 @@ minimal owner action.
 ## Current status
 
 The product and repository are now named **Evoke Ink** / `EvokeInkApp`; the
-Cloudflare Worker is `evoke-ink-app`. Release automation is committed on `main`
-and has passed its hosted quality and Android artifact path. Every push to
-`main` receives an independent release quality gate, an Android debug APK build,
-a bundled-secret scan, SHA-256 generation, and a 30-day GitHub artifact. The web
-job becomes automatic after two Cloudflare repository secrets and one enable
-variable are configured; it builds, dry-runs, deploys in mock mode, and probes
-the public home, health, and prompt contracts.
+Cloudflare Worker is `evoke-ink-app`. Release automation is enabled on `main`
+and has passed its complete hosted path: release quality gate, Android debug APK
+build, bundled-secret scan, SHA-256 generation, 30-day artifact upload,
+Cloudflare mock deployment, and public home/health/prompt probes. The required
+GitHub Cloudflare secrets and enable variable are configured. The public Worker
+serves Evoke Ink branding and the old `read-and-reflect` Worker URL returns 404.
 
 `next-env.d.ts` is now generated and ignored as Next.js recommends. A tracked
 `vinext-env.d.ts` owns the vinext augmentation, and `typecheck` explicitly runs
@@ -111,6 +110,13 @@ the public home, health, and prompt contracts.
   unset. A process-startup test exposed by the preceding run now has a narrow
   15-second ceiling and passed five consecutive local runs before the hosted
   rerun passed.
+- Hosted Release Automation run `40574662630` passed at commit `0d53869` after
+  a one-time interactive reconciliation of the dashboard-owned Worker
+  configuration. It passed the complete quality gate, Android artifact build
+  and scan, unattended Cloudflare deployment, and hosted synthetic probe.
+- The public synthetic probe returned `web=true`, `health=true`, and
+  `prompt=true`. The public home returned 200, contains `Evoke Ink`, and does
+  not contain the retired `Read & Reflect` brand.
 - `Quality` now runs for pull requests and manual dispatch only. Direct `main`
   pushes use the stricter Release Automation gate, avoiding a redundant second
   full test/build run and conflicting status signal.
@@ -132,19 +138,9 @@ the public home, health, and prompt contracts.
 
 ## Open issues and blockers
 
-- The current public `evoke-ink-app` Worker still serves the pre-rename build.
-  `/` and `/api/health` return 200, but `/api/prompts` returns 403 because the
-  deployed allowlist contains the retired origin. The corrected build is on
-  `main` but intentionally was not deployed.
-- A local deployment preflight revealed that the staged `OPENAI_API_KEY` and
-  `AI_QUOTA_HASH_SECRET` were exposed by Cloudflare's remote configuration
-  comparison as plaintext values. No upload occurred. Both values must be
-  rotated and re-added with type **Secret** before any deployment or OpenAI
-  activation. Never rerun remote configuration comparison against the current
-  values.
-- GitHub currently has no Cloudflare release secrets or enable variable. Web
-  auto-deployment will remain skipped until the owner creates a scoped
-  Cloudflare API token and configures the documented three repository values.
+- OpenAI remains intentionally disabled (`AI_PROVIDER=mock`). Live-provider
+  activation still requires the documented web-only review and explicit owner
+  decision; the deployed mock path is healthy without consuming OpenAI spend.
 - The automated Android artifact is debug-signed. Play release signing, account
   ownership, listing approval, and submission remain owner-controlled work.
 - Physical-device checks for enlarged system text and safe-area behavior remain
@@ -154,9 +150,6 @@ the public home, health, and prompt contracts.
 
 ## Immediate next action
 
-Immediately revoke the exposed OpenAI key, create a replacement restricted key,
-generate a new stable quota secret, and store both on `evoke-ink-app` with
-Cloudflare type **Secret**. Then configure the two GitHub Cloudflare deployment
-secrets and `ENABLE_PRODUCTION_DEPLOY=true`; rerun Release Automation and verify
-the public mock probe. Keep OpenAI activation disabled until that web-only
-review completes.
+Complete the documented web-only review. If it passes, explicitly activate the
+OpenAI provider under the approved $3 pilot budget and rerun the provider-aware
+acceptance checks. Otherwise keep the current healthy deterministic mock release.
