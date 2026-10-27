@@ -25,7 +25,7 @@ application, or the browser bundle.
 1. Sign in to the [OpenAI API Platform](https://platform.openai.com/). API
    billing is separate from a ChatGPT subscription.
 2. Open the project selector and select **Create project**.
-3. Name the project `Read & Reflect Production`. Keep production usage separate
+3. Name the project `Evoke Ink Production`. Keep production usage separate
    from experiments so usage, access, and rotation remain attributable.
 4. Open the new project's **Limits** page.
 5. Enable only the models the application needs. The current default model in
@@ -43,10 +43,10 @@ and keys in [Managing projects in the API platform](https://help.openai.com/en/a
 Use a project service account when available so the production credential does
 not depend on an individual team member.
 
-1. While `Read & Reflect Production` is selected, open the project's
+1. While `Evoke Ink Production` is selected, open the project's
    **Members** page.
 2. Select **+ Service account**.
-3. Name it `read-reflect-production` and create it.
+3. Name it `evoke-ink-production` and create it.
 4. Copy the generated secret key immediately into a password manager. OpenAI
    shows the unredacted value once.
 5. Open the project's **API Keys** page and restrict the service-account key to
@@ -63,7 +63,7 @@ least-privilege and expiration rules.
 ### Store the key in the Cloudflare Worker
 
 1. Open the [Cloudflare dashboard](https://dash.cloudflare.com/).
-2. Go to **Workers & Pages** and select the `read-and-reflect` Worker.
+2. Go to **Workers & Pages** and select the `evoke-ink-app` Worker.
 3. Open **Settings → Variables and Secrets**.
 4. Select **Add**.
 5. Choose **Secret** as the type, enter `OPENAI_API_KEY` as the name, paste the
@@ -110,7 +110,7 @@ not receive the OpenAI key.
 ### Find the account ID
 
 1. Sign in to the [Cloudflare dashboard](https://dash.cloudflare.com/).
-2. Select the account that owns the `read-and-reflect` Worker.
+2. Select the account that owns the `evoke-ink-app` Worker.
 3. Open the Worker or the account overview and copy the **Account ID**.
 4. Check that the selected account is the same account billed for Workers Paid.
    Do not use a Zone ID.
@@ -120,7 +120,7 @@ not receive the OpenAI key.
 1. In Cloudflare, open **My Profile → API Tokens**. If the account uses
    account-owned service tokens, use **Manage Account → API Tokens** instead.
 2. Select **Create Token → Create Custom Token**.
-3. Name the token `github-read-reflect-production-deploy`.
+3. Name the token `github-evoke-ink-production-deploy`.
 4. Add the account permission **Workers Scripts → Edit**.
 5. Limit **Account Resources** to the one account that owns this Worker.
 6. Do not add DNS, R2, KV, billing, user-management, or API-token-management
@@ -141,7 +141,7 @@ and defines the permission in
 ### Add the account values to GitHub
 
 1. Open the GitHub repository
-   `hiteshpatwari/HandWrittenApp`.
+   `hiteshpatwari/EvokeInkApp`.
 2. Go to **Settings → Secrets and variables → Actions → Secrets**.
 3. Select **New repository secret**.
 4. Create `CLOUDFLARE_ACCOUNT_ID` with the copied Cloudflare Account ID.
@@ -160,9 +160,9 @@ The same setup can be entered from an authenticated GitHub CLI without placing
 values in command arguments. Each secret command prompts for its value:
 
 ```powershell
-gh secret set CLOUDFLARE_ACCOUNT_ID --repo hiteshpatwari/HandWrittenApp
-gh secret set CLOUDFLARE_API_TOKEN --repo hiteshpatwari/HandWrittenApp
-gh variable set ENABLE_PRODUCTION_DEPLOY --body true --repo hiteshpatwari/HandWrittenApp
+gh secret set CLOUDFLARE_ACCOUNT_ID --repo hiteshpatwari/EvokeInkApp
+gh secret set CLOUDFLARE_API_TOKEN --repo hiteshpatwari/EvokeInkApp
+gh variable set ENABLE_PRODUCTION_DEPLOY --body true --repo hiteshpatwari/EvokeInkApp
 ```
 
 ### Verify the automated deployment
@@ -170,14 +170,14 @@ gh variable set ENABLE_PRODUCTION_DEPLOY --body true --repo hiteshpatwari/HandWr
 1. Confirm names only; these commands do not print secret values:
 
    ```powershell
-   gh secret list --repo hiteshpatwari/HandWrittenApp
-   gh variable list --repo hiteshpatwari/HandWrittenApp
+   gh secret list --repo hiteshpatwari/EvokeInkApp
+   gh variable list --repo hiteshpatwari/EvokeInkApp
    ```
 
 2. Open **Actions → Release Automation → Run workflow → Run workflow**, or run:
 
    ```powershell
-   gh workflow run release.yml --repo hiteshpatwari/HandWrittenApp
+   gh workflow run release.yml --repo hiteshpatwari/EvokeInkApp
    ```
 
 3. Wait for **Verify release commit**, **Build Android APK**, and

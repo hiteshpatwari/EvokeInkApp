@@ -90,7 +90,7 @@ export function buildWorksheetPdf(session: ReadingSession): jsPDF {
     if (pageIndex === 0) {
       document.setFont("helvetica", "bold");
       document.setFontSize(18);
-      document.text("Read & Reflect", 0.7, 0.65);
+      document.text("Evoke Ink", 0.7, 0.65);
       document.setFontSize(13);
       document.text(titleLines, 0.7, titleY);
       document.setFont("helvetica", "normal");

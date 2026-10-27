@@ -5,7 +5,7 @@ param(
     [string]$Environment,
 
     [Parameter(Mandatory = $true)]
-    [ValidateSet('read-and-reflect')]
+    [ValidateSet('evoke-ink-app')]
     [string]$WorkerName,
 
     [Parameter(Mandatory = $true)]

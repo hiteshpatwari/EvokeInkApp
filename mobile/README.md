@@ -1,6 +1,6 @@
 # Mobile shell
 
-This workspace builds the existing Read & Reflect React UI as bundled Capacitor
+This workspace builds the existing Evoke Ink React UI as bundled Capacitor
 assets. It does not use `server.url` or permit remote WebView navigation.
 
 Set `VITE_PROMPT_API_URL` to the full HTTPS `/api/prompts` endpoint before a

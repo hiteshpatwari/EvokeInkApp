@@ -458,7 +458,7 @@ export function promptApiConfigFromEnvironment(): PromptApiConfig {
     ),
     ipLimit: numberFromEnvironment("AI_IP_MONTHLY_LIMIT", 200),
     monthlyBudgetMicros: Math.round(
-      numberFromEnvironment("AI_MONTHLY_BUDGET_USD", 250) * 1_000_000,
+      numberFromEnvironment("AI_MONTHLY_BUDGET_USD", 3) * 1_000_000,
     ),
     estimatedRequestCostMicros: Math.round(
       numberFromEnvironment("AI_ESTIMATED_REQUEST_COST_USD", 0.01) * 1_000_000,

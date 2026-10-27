@@ -6,7 +6,7 @@
 
 ## Context
 
-Read & Reflect is a local-first Next.js application. Its browser UI currently
+Evoke Ink is a local-first Next.js application. Its browser UI currently
 persists one canonical versioned JSON state in `localStorage`, calls the prompt
 endpoint with `fetch("/api/prompts")`, and downloads generated PDFs through the
 browser. The mobile release must preserve offline mock operation, avoid shipping

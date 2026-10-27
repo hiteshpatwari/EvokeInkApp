@@ -1,4 +1,4 @@
-# Read & Reflect production test plan
+# Evoke Ink production test plan
 
 Last repository inspection: 2026-10-20.
 

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.readreflect.mobile",
-  appName: "Read & Reflect",
+  appName: "Evoke Ink",
   webDir: "dist",
   server: {
     hostname: "localhost",

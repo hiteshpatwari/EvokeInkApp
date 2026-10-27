@@ -15,10 +15,11 @@ concurrency:
 
 env:
   AI_PROVIDER: mock
-  APP_ALLOWED_ORIGINS: https://read-and-reflect.hiteshpatwari.workers.dev,https://localhost,capacitor://localhost
+  AI_MONTHLY_BUDGET_USD: "3"
+  APP_ALLOWED_ORIGINS: https://evoke-ink-app.hiteshpatwari.workers.dev,https://localhost,capacitor://localhost
   NEXT_TELEMETRY_DISABLED: "1"
-  PRODUCTION_ORIGIN: https://read-and-reflect.hiteshpatwari.workers.dev
-  VITE_PROMPT_API_URL: https://read-and-reflect.hiteshpatwari.workers.dev/api/prompts
+  PRODUCTION_ORIGIN: https://evoke-ink-app.hiteshpatwari.workers.dev
+  VITE_PROMPT_API_URL: https://evoke-ink-app.hiteshpatwari.workers.dev/api/prompts
 
 jobs:
   verify:
@@ -96,7 +97,7 @@ jobs:
       - name: Upload Android APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: read-and-reflect-android-${{ github.sha }}
+          name: evoke-ink-android-${{ github.sha }}
           path: |
             mobile/android/app/build/outputs/apk/debug/app-debug.apk
             mobile/android/app/build/outputs/apk/debug/app-debug.apk.sha256

@@ -5,7 +5,7 @@ import {
   exports as workerExports,
 } from "cf/config";
 
-const workerName = "read-and-reflect";
+const workerName = "evoke-ink-app";
 
 function environmentText(name: string, fallback: string): string {
   const value = process.env[name]?.trim();
@@ -30,20 +30,18 @@ if (
   );
 }
 
-const providerSecretBindings =
-  providerName === "openai" || transcriptionProviderName === "openai"
+// Keep prepared provider credentials typed as secrets even while production is
+// deliberately running in mock mode. Conditional omission makes a mock deploy
+// conflict with (or remove) secrets staged for the later reviewed activation.
+const providerSecretBindings = {
+  OPENAI_API_KEY: bindings.secret(),
+  AI_QUOTA_HASH_SECRET: bindings.secret(),
+  ...(transcriptionProviderName === "openai"
     ? {
-        OPENAI_API_KEY: bindings.secret(),
-        ...(providerName === "openai"
-          ? { AI_QUOTA_HASH_SECRET: bindings.secret() }
-          : {}),
-        ...(transcriptionProviderName === "openai"
-          ? {
-              HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET: bindings.secret(),
-            }
-          : {}),
+        HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET: bindings.secret(),
       }
-    : {};
+    : {}),
+};
 
 export default defineConfig({
   worker: defineWorker({
@@ -115,7 +113,7 @@ export default defineConfig({
         environmentText("AI_IP_MONTHLY_LIMIT", "200"),
       ),
       AI_MONTHLY_BUDGET_USD: bindings.text(
-        environmentText("AI_MONTHLY_BUDGET_USD", "250"),
+        environmentText("AI_MONTHLY_BUDGET_USD", "3"),
       ),
       AI_ESTIMATED_REQUEST_COST_USD: bindings.text(
         environmentText("AI_ESTIMATED_REQUEST_COST_USD", "0.01"),

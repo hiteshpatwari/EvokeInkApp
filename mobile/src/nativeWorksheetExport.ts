@@ -124,7 +124,7 @@ export const nativeWorksheetExporter = createNativeWorksheetExporter({
   },
   async shareFile(uri, filename) {
     await Share.share({
-      title: "Read & Reflect worksheet",
+      title: "Evoke Ink worksheet",
       text: filename,
       files: [uri],
       dialogTitle: "Share worksheet PDF",

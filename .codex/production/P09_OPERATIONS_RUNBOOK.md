@@ -56,10 +56,10 @@ the synthetic check only when both `-Execute` and PowerShell confirmation are
 provided.
 
 ```powershell
-pnpm ops:failover -- -Environment production -WorkerName read-and-reflect `
+pnpm ops:failover -- -Environment production -WorkerName evoke-ink-app `
   -AllowedOrigin https://app.example.invalid `
   -ProbeBaseUrl https://app.example.invalid `
-  -ConfirmTarget production/read-and-reflect
+  -ConfirmTarget production/evoke-ink-app
 ```
 
 Review the JSON plan, then repeat with `-Execute`. Never use a native Capacitor
@@ -73,11 +73,11 @@ script routes 100% to that version and then probes only with `-Execute` and
 PowerShell confirmation. It never bypasses deployment checks.
 
 ```powershell
-pnpm ops:rollback -- -Environment production -WorkerName read-and-reflect `
+pnpm ops:rollback -- -Environment production -WorkerName evoke-ink-app `
   -VerifiedVersionId 00000000-0000-0000-0000-000000000000 `
   -AllowedOrigin https://app.example.invalid `
   -ProbeBaseUrl https://app.example.invalid `
-  -ConfirmTarget production/read-and-reflect/00000000-0000-0000-0000-000000000000
+  -ConfirmTarget production/evoke-ink-app/00000000-0000-0000-0000-000000000000
 ```
 
 Durable Object data is not deleted by code rollback.

@@ -9,12 +9,12 @@ paid-plan activation before the first production deployment. Until then,
 approved.
 
 Workers Paid was confirmed active on October 21, 2026. The paid mock release is
-deployed at `https://read-and-reflect.hiteshpatwari.workers.dev` as version
+deployed at `https://evoke-ink-app.hiteshpatwari.workers.dev` as version
 `addba605-7cc8-4bf8-8d15-6548aa1cc31c`. Its exact origin allowlist contains the
 public Workers URL and Android's `https://localhost`; both synthetic probes
 pass. The deployment declares no OpenAI secrets and remains mock-only.
 
-The Worker is `read-and-reflect`. It exports a SQLite-backed Durable Object
+The Worker is `evoke-ink-app`. It exports a SQLite-backed Durable Object
 named `PromptControlDurableObject`; every production prompt reservation is
 serialized through the single `global-v1` object. The application remains
 usable in deterministic mock mode when OpenAI is disabled or unavailable.
@@ -54,8 +54,8 @@ or command arguments. The interactive commands below prompt for values without
 placing them in the command line:
 
 ```powershell
-pnpm exec cf workers secrets update OPENAI_API_KEY --worker read-and-reflect
-pnpm exec cf workers secrets update AI_QUOTA_HASH_SECRET --worker read-and-reflect
+pnpm exec cf workers secrets update OPENAI_API_KEY --worker evoke-ink-app
+pnpm exec cf workers secrets update AI_QUOTA_HASH_SECRET --worker evoke-ink-app
 ```
 
 Provision both secrets before changing `AI_PROVIDER` from `mock` to `openai`.
@@ -145,13 +145,13 @@ dependency. After the mock deployment, repeat the health and prompt probes.
 List deployments; the first item is the version currently serving traffic:
 
 ```powershell
-pnpm exec cf workers deployments list --worker read-and-reflect
+pnpm exec cf workers deployments list --worker evoke-ink-app
 ```
 
 To roll back, create a 100% deployment for the previously verified version:
 
 ```powershell
-pnpm exec cf workers deployments create --worker read-and-reflect --versions '[{"version_id":"<verified-version-id>","percentage":100}]'
+pnpm exec cf workers deployments create --worker evoke-ink-app --versions '[{"version_id":"<verified-version-id>","percentage":100}]'
 ```
 
 Do not use `--bypass-deployment-checks` as a routine rollback. A changed secret

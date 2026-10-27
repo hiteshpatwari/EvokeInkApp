@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Read & Reflect",
+  title: "Evoke Ink",
   description:
     "Create thoughtful, printable reading reflection worksheets for handwriting practice.",
 };

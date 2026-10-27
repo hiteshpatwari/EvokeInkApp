@@ -1,4 +1,4 @@
-# Read & Reflect implementation status
+# Evoke Ink implementation status
 
 Last verified: October 16, 2026
 

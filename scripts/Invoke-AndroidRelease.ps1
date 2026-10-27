@@ -8,7 +8,7 @@ param(
         -not $uri.Fragment -and
         $uri.AbsolutePath -eq '/api/prompts'
     })]
-    [string]$PromptApiUrl = 'https://read-and-reflect.hiteshpatwari.workers.dev/api/prompts',
+    [string]$PromptApiUrl = 'https://evoke-ink-app.hiteshpatwari.workers.dev/api/prompts',
 
     [switch]$Install
 )

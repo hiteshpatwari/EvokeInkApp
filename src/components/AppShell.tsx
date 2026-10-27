@@ -820,9 +820,14 @@ export function AppShell({ storage }: AppShellProps = {}) {
   return (
     <div className="app-shell">
       <header className="topbar no-print">
-        <button type="button" className="brand-button" onClick={goHome}>
-          <span>R&amp;R</span>
-          <strong>Read &amp; Reflect</strong>
+        <button
+          type="button"
+          className="brand-button"
+          aria-label="Evoke Ink"
+          onClick={goHome}
+        >
+          <span>EI</span>
+          <strong>Evoke Ink</strong>
         </button>
         <nav aria-label="Main navigation">
           <button

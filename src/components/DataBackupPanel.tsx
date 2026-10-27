@@ -122,7 +122,7 @@ export function DataBackupPanel({
     );
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `read-and-reflect-backup-${new Date()
+    anchor.download = `evoke-ink-backup-${new Date()
       .toISOString()
       .slice(0, 10)}.json`;
     document.body.append(anchor);

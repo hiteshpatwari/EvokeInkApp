@@ -131,7 +131,7 @@ describe("DataBackupPanel", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "not a valid Read & Reflect backup",
+      "not a valid Evoke Ink backup",
     );
     expect(onImport).not.toHaveBeenCalled();
   });

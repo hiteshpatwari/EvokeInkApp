@@ -25,13 +25,13 @@ describe("operations scripts", () => {
       "-Environment",
       "production",
       "-WorkerName",
-      "read-and-reflect",
+      "evoke-ink-app",
       "-AllowedOrigin",
       "https://read.example",
       "-ProbeBaseUrl",
       "https://read.example",
       "-ConfirmTarget",
-      "production/read-and-reflect",
+      "production/evoke-ink-app",
     ]);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
@@ -46,7 +46,7 @@ describe("operations scripts", () => {
       "-Environment",
       "production",
       "-WorkerName",
-      "read-and-reflect",
+      "evoke-ink-app",
       "-AllowedOrigin",
       "https://read.example",
       "-ProbeBaseUrl",
@@ -64,7 +64,7 @@ describe("operations scripts", () => {
       "-Environment",
       "production",
       "-WorkerName",
-      "read-and-reflect",
+      "evoke-ink-app",
       "-VerifiedVersionId",
       version,
       "-AllowedOrigin",
@@ -72,7 +72,7 @@ describe("operations scripts", () => {
       "-ProbeBaseUrl",
       "https://read.example",
       "-ConfirmTarget",
-      `production/read-and-reflect/${version}`,
+      `production/evoke-ink-app/${version}`,
     ]);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({

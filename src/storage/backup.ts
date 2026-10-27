@@ -73,7 +73,7 @@ export type BackupData = {
 export class BackupValidationError extends Error {
   constructor() {
     super(
-      "This file is not a valid Read & Reflect backup, or it uses an unsupported version.",
+      "This file is not a valid Evoke Ink backup, or it uses an unsupported version.",
     );
     this.name = "BackupValidationError";
   }

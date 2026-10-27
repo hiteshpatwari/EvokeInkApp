@@ -35,10 +35,18 @@ function mockSuccessfulGeneration() {
   );
 }
 
-describe("Read & Reflect workflow", () => {
+describe("Evoke Ink workflow", () => {
   beforeEach(() => {
     localStorage.clear();
     vi.stubGlobal("fetch", mockSuccessfulGeneration());
+  });
+
+  it("identifies the product as Evoke Ink", async () => {
+    render(<AppShell />);
+
+    expect(
+      await screen.findByRole("button", { name: "Evoke Ink" }),
+    ).toBeInTheDocument();
   });
 
   it("identifies the active top-level destination", async () => {

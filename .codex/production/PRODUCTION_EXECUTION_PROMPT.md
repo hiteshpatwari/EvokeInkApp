@@ -1,6 +1,6 @@
-# Read & Reflect production execution prompt
+# Evoke Ink production execution prompt
 
-Use this prompt to coordinate independent agents that prepare Read & Reflect for a public web beta and later iOS and Android distribution.
+Use this prompt to coordinate independent agents that prepare Evoke Ink for a public web beta and later iOS and Android distribution.
 
 ## Mission
 
@@ -27,7 +27,7 @@ Take the existing application at `C:\projects\HandwrittenApp` from a verified lo
 
 ## Target outcome
 
-A parent can install or open Read & Reflect, create a profile, generate and edit a worksheet, save it locally, share or download a Letter-size PDF, and recover from AI failure. A public client cannot obtain the provider key or create uncontrolled provider spend. Deployment and mobile release procedures are repeatable, observable, and reversible.
+A parent can install or open Evoke Ink, create a profile, generate and edit a worksheet, save it locally, share or download a Letter-size PDF, and recover from AI failure. A public client cannot obtain the provider key or create uncontrolled provider spend. Deployment and mobile release procedures are repeatable, observable, and reversible.
 
 ## Cost target
 
