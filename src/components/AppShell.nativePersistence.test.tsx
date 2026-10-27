@@ -18,11 +18,10 @@ async function fillProfile(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole("button", { name: "Create child profile" }),
   );
-  await user.type(screen.getByLabelText("Child name"), "Aavya");
-  await user.type(
-    screen.getByLabelText("School grade or age range"),
-    "Grade 3",
-  );
+  await user.click(screen.getByLabelText("Child name"));
+  await user.paste("Aavya");
+  await user.click(screen.getByLabelText("School grade or age range"));
+  await user.paste("Grade 3");
 }
 
 describe("AppShell native durability gate", () => {

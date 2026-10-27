@@ -177,7 +177,8 @@ describe("typed response coaching", () => {
     const user = await openResponseReview();
     const responseField = screen.getByLabelText("Student response");
     const draft = "The character chose to help because it was the fair choice.";
-    await user.type(responseField, draft);
+    await user.click(responseField);
+    await user.paste(draft);
     await user.click(screen.getByRole("button", { name: "Get feedback" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
