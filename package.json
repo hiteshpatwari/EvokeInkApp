@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint --deny-warnings .",
-    "typecheck": "tsc --noEmit && pnpm mobile:typecheck",
+    "typecheck": "next typegen && tsc --noEmit && pnpm mobile:typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev:vinext": "vite dev --port 3001",
@@ -26,6 +26,8 @@
     "mobile:build": "pnpm --filter @read-and-reflect/mobile build",
     "mobile:sync": "pnpm --filter @read-and-reflect/mobile cap:sync",
     "mobile:secrets": "pnpm --filter @read-and-reflect/mobile secrets:check",
+    "release:android": "pwsh -NoLogo -NoProfile -File scripts/Invoke-AndroidRelease.ps1",
+    "release:android:install": "pwsh -NoLogo -NoProfile -File scripts/Invoke-AndroidRelease.ps1 -Install",
     "ops:probe": "pwsh -NoLogo -NoProfile -File scripts/Invoke-SyntheticProbe.ps1",
     "ops:failover": "pwsh -NoLogo -NoProfile -File scripts/Invoke-MockFailover.ps1",
     "ops:rollback": "pwsh -NoLogo -NoProfile -File scripts/Invoke-WorkerRollback.ps1"

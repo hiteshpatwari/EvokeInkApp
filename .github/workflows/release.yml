@@ -1,0 +1,155 @@
+name: Release Automation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+env:
+  AI_PROVIDER: mock
+  APP_ALLOWED_ORIGINS: https://read-and-reflect.hiteshpatwari.workers.dev,https://localhost,capacitor://localhost
+  NEXT_TELEMETRY_DISABLED: "1"
+  PRODUCTION_ORIGIN: https://read-and-reflect.hiteshpatwari.workers.dev
+  VITE_PROMPT_API_URL: https://read-and-reflect.hiteshpatwari.workers.dev/api/prompts
+
+jobs:
+  verify:
+    name: Verify release commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build web application
+        run: pnpm build
+
+  android-package:
+    name: Build Android APK
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out verified commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+
+      - name: Set up Java 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Android APK and scan bundled assets
+        shell: pwsh
+        run: ./scripts/Invoke-AndroidRelease.ps1
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: read-and-reflect-android-${{ github.sha }}
+          path: |
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy-web:
+    name: Deploy and probe Cloudflare
+    if: >-
+      needs.android-package.result == 'success' &&
+      github.ref == 'refs/heads/main' &&
+      vars.ENABLE_PRODUCTION_DEPLOY == 'true'
+    needs: android-package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      RELEASE_SHA: ${{ github.sha }}
+    steps:
+      - name: Check out verified commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ env.RELEASE_SHA }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "CLOUDFLARE_ACCOUNT_ID is not configured." >&2; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "CLOUDFLARE_API_TOKEN is not configured." >&2; exit 1; }
+
+      - name: Build Cloudflare Worker
+        run: pnpm build:vinext
+
+      - name: Validate Cloudflare deployment bundle
+        run: pnpm exec cf deploy --dry-run --prebuilt
+
+      - name: Deploy mock production release
+        run: pnpm exec cf deploy --prebuilt --tag production --message "Automated release $RELEASE_SHA"
+
+      - name: Probe deployed web and prompt contracts
+        shell: pwsh
+        run: >-
+          ./scripts/Invoke-SyntheticProbe.ps1
+          -BaseUrl $env:PRODUCTION_ORIGIN
+          -AllowedOrigin $env:PRODUCTION_ORIGIN
