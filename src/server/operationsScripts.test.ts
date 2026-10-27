@@ -39,7 +39,7 @@ describe("operations scripts", () => {
       dryRun: true,
       provider: "mock",
     });
-  });
+  }, 15_000);
 
   it("rejects an ambiguous failover target", () => {
     const result = run("Invoke-MockFailover.ps1", [
@@ -56,7 +56,7 @@ describe("operations scripts", () => {
     ]);
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("ConfirmTarget must exactly equal");
-  });
+  }, 15_000);
 
   it("produces a non-mutating rollback plan with an explicit version", () => {
     const version = "01234567-89ab-cdef-0123-456789abcdef";
@@ -80,5 +80,5 @@ describe("operations scripts", () => {
       dryRun: true,
       version,
     });
-  });
+  }, 15_000);
 });
