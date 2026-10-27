@@ -124,6 +124,8 @@ export function AppShell({ storage }: AppShellProps = {}) {
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(
     null,
   );
+  const regenerationVariants = useRef(new Map<string, number>());
+  const [skillSelectionNotice, setSkillSelectionNotice] = useState("");
   const [bookFilter, setBookFilter] = useState("");
   const [childFilter, setChildFilter] = useState("all");
   const [pendingDeleteSessionId, setPendingDeleteSessionId] = useState<
@@ -270,6 +272,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
       return;
     }
     setCreation({ ...emptyCreation, skills: [...emptyCreation.skills] });
+    setSkillSelectionNotice("");
     setWorkingSession(null);
     setScreen("create");
   };
@@ -392,6 +395,44 @@ export function AppShell({ storage }: AppShellProps = {}) {
     return result.data;
   };
 
+  const changeSkillSelection = (value: string, checked: boolean) => {
+    if (!checked) {
+      setCreation({
+        ...creation,
+        skills: creation.skills.filter((skill) => skill !== value),
+      });
+      setSkillSelectionNotice("");
+      return;
+    }
+    if (value === "prediction") {
+      setCreation({ ...creation, skills: [...creation.skills, value] });
+      setSkillSelectionNotice(
+        "Prediction selected for the optional fourth prompt.",
+      );
+      return;
+    }
+    const selectedCoreSkills = creation.skills.filter(
+      (skill) => skill !== "prediction",
+    );
+    const removedSkill =
+      selectedCoreSkills.length >= 2 ? selectedCoreSkills[0] : undefined;
+    const nextSkills = creation.skills.filter(
+      (skill) => skill !== removedSkill,
+    );
+    setCreation({ ...creation, skills: [...nextSkills, value] });
+    if (!removedSkill) {
+      setSkillSelectionNotice("");
+      return;
+    }
+    const selectedLabel =
+      SKILLS.find(([skill]) => skill === value)?.[1] ?? value;
+    const removedLabel =
+      SKILLS.find(([skill]) => skill === removedSkill)?.[1] ?? removedSkill;
+    setSkillSelectionNotice(
+      `${selectedLabel} selected. ${removedLabel} was removed to keep two core skills.`,
+    );
+  };
+
   const requestPrompts = async (payload: GenerationInput) => {
     const response = await fetch("/api/prompts", {
       method: "POST",
@@ -452,19 +493,32 @@ export function AppShell({ storage }: AppShellProps = {}) {
   };
 
   const regenerateOne = async (index: number) => {
-    const payload = generationPayload(index + 1, workingSession?.childSnapshot);
-    if (!payload || !workingSession) return;
+    const currentPrompt = workingSession?.prompts[index];
+    if (!currentPrompt || !workingSession) return;
+    const variant =
+      (regenerationVariants.current.get(currentPrompt.id) ?? 0) + 1;
+    const payload = generationPayload(variant, workingSession.childSnapshot);
+    if (!payload) return;
     setRegeneratingIndex(index);
     setError("");
     try {
       const result = await requestPrompts(payload);
       const replacement = result.prompts[index] ?? result.prompts[0];
       if (!replacement) throw new Error("No replacement prompt was returned.");
+      regenerationVariants.current.set(currentPrompt.id, variant);
+      if (
+        replacement.text.trim() === currentPrompt.text.trim() &&
+        replacement.skill === currentPrompt.skill
+      ) {
+        setNotice(
+          "The provider returned the same wording. Try again for another version.",
+        );
+        return;
+      }
       const replacementWithId = {
         ...replacement,
-        id: workingSession.prompts[index]?.id ?? id("prompt"),
-        required:
-          workingSession.prompts[index]?.required ?? replacement.required,
+        id: currentPrompt.id,
+        required: currentPrompt.required,
       };
       setWorkingSession({
         ...workingSession,
@@ -585,6 +639,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
       specificity: session.specificity,
       skills: [...session.skills],
     });
+    setSkillSelectionNotice("");
     setScreen(target);
   };
 
@@ -1457,7 +1512,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
               <p className="muted">
                 Choose up to two core skills. A concise summary is always
                 included; prediction can replace the optional personal prompt.
-                Uncheck a selected skill to choose a different one.
+                Choosing another core skill replaces the first selected one.
               </p>
               <div className="checkbox-grid">
                 {SKILLS.map(([value, skillLabel]) => (
@@ -1465,28 +1520,23 @@ export function AppShell({ storage }: AppShellProps = {}) {
                     <input
                       type="checkbox"
                       checked={creation.skills.includes(value)}
-                      disabled={
-                        !creation.skills.includes(value) &&
-                        value !== "prediction" &&
-                        creation.skills.filter(
-                          (skill) => skill !== "prediction",
-                        ).length >= 2
-                      }
                       onChange={(event) =>
-                        setCreation({
-                          ...creation,
-                          skills: event.target.checked
-                            ? [...creation.skills, value]
-                            : creation.skills.filter(
-                                (skill) => skill !== value,
-                              ),
-                        })
+                        changeSkillSelection(value, event.target.checked)
                       }
                     />
                     {skillLabel}
                   </label>
                 ))}
               </div>
+              {skillSelectionNotice && (
+                <p
+                  className="selection-notice"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {skillSelectionNotice}
+                </p>
+              )}
             </fieldset>
             <p className="privacy-note">
               When OpenAI generation is enabled, reading profile settings, book

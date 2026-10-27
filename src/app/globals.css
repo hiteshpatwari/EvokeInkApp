@@ -1110,6 +1110,12 @@ textarea {
 .filter-row {
   margin-bottom: 24px;
 }
+.selection-notice {
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: 16px 0 0;
+}
 .library-toolbar {
   background: var(--surface);
   border: 1px solid var(--line);

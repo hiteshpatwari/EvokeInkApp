@@ -152,6 +152,19 @@ describe("MockPromptGenerator", () => {
     );
   });
 
+  it("changes prompt wording for regeneration variants without changing the skill plan", async () => {
+    const generator = new MockPromptGenerator();
+    const original = await generator.generate(baseInput);
+    const refreshed = await generator.generate({ ...baseInput, variant: 1 });
+
+    expect(refreshed.prompts.map((prompt) => prompt.skill)).toEqual(
+      original.prompts.map((prompt) => prompt.skill),
+    );
+    expect(refreshed.prompts.map((prompt) => prompt.text)).not.toEqual(
+      original.prompts.map((prompt) => prompt.text),
+    );
+  });
+
   it("supports conflict, author purpose, and comparison categories", async () => {
     const generator = new MockPromptGenerator();
     const conflictAndPurpose = await generator.generate({

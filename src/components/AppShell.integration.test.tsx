@@ -300,6 +300,42 @@ describe("Evoke Ink workflow", () => {
     expect(payload).not.toHaveProperty("worksheetId");
   });
 
+  it("replaces the oldest selected core skill when another skill is chosen", async () => {
+    const repository = createLocalRepository(localStorage);
+    repository.saveProfile({
+      id: "child-skills",
+      name: "Aavya",
+      gradeOrAge: "Grade 3",
+      difficulty: "grade_level",
+      responseLength: "medium",
+      createdAt: "2026-10-12T00:00:00.000Z",
+      updatedAt: "2026-10-12T00:00:00.000Z",
+    });
+    const user = userEvent.setup();
+    render(<AppShell />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Create a worksheet" }),
+    );
+    const evidence = screen.getByRole("checkbox", {
+      name: "Evidence & explanation",
+    });
+    const inference = screen.getByRole("checkbox", { name: "Inference" });
+    const cause = screen.getByRole("checkbox", { name: "Cause & effect" });
+    expect(evidence).toBeChecked();
+    expect(inference).toBeChecked();
+    expect(cause).toBeEnabled();
+
+    await user.click(cause);
+
+    expect(evidence).not.toBeChecked();
+    expect(inference).toBeChecked();
+    expect(cause).toBeChecked();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Cause & effect selected. Evidence & explanation was removed to keep two core skills.",
+    );
+  });
+
   it("tracks completed reflections separately from saved worksheets", async () => {
     const repository = createLocalRepository(localStorage);
     const profile: ChildProfile = {
@@ -582,7 +618,24 @@ describe("Evoke Ink workflow", () => {
     };
     repository.saveProfile(currentProfile);
     repository.saveSession(session);
-    const fetchMock = mockSuccessfulGeneration();
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const variant = JSON.parse(String(init?.body)).variant as number;
+        return {
+          ok: true,
+          json: async () => ({
+            prompts: generatedPrompts.map((prompt, index) => ({
+              ...prompt,
+              text:
+                index === 0
+                  ? `Refreshed prompt variant ${variant}. Explain one important idea using evidence.`
+                  : prompt.text,
+            })),
+            provider: "mock",
+          }),
+        } as Response;
+      },
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const user = userEvent.setup();
@@ -596,13 +649,25 @@ describe("Evoke Ink workflow", () => {
       screen.getAllByRole("button", { name: "Regenerate this prompt" })[0]!,
     );
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(screen.getByLabelText("Prompt 1")).toHaveValue(
+      "Refreshed prompt variant 1. Explain one important idea using evidence.",
+    );
+    await user.click(
+      screen.getAllByRole("button", { name: "Regenerate this prompt" })[0]!,
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(screen.getByLabelText("Prompt 1")).toHaveValue(
+      "Refreshed prompt variant 2. Explain one important idea using evidence.",
+    );
     const request = fetchMock.mock.calls.at(-1)?.[1];
     if (!request) throw new Error("Expected prompt request options");
     const payload = JSON.parse(String(request.body)) as {
       child: { gradeOrAge: string };
+      variant: number;
     };
     expect(payload.child.gradeOrAge).toBe("Grade 3");
     expect(payload.child).not.toHaveProperty("name");
+    expect(payload.variant).toBe(2);
     expect(payload).not.toHaveProperty("profileId");
     expect(payload).not.toHaveProperty("worksheetId");
     expect(JSON.stringify(payload)).not.toContain(currentProfile.name);

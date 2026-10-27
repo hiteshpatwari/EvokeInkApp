@@ -295,21 +295,47 @@ function contextualText(
   return template.text[band];
 }
 
+const REGENERATION_LEADS: Record<LanguageBand, readonly string[]> = {
+  accessible: [
+    "Try this a new way:",
+    "Use a different detail:",
+    "Take another look:",
+  ],
+  standard: [
+    "Approach this from a fresh angle:",
+    "Use a detail you have not used yet:",
+    "Try a different line of reasoning:",
+  ],
+  advanced: [
+    "Reframe the analysis:",
+    "Build from a different textual detail:",
+    "Test an alternative interpretation:",
+  ],
+};
+
+function variedPromptText(
+  text: string,
+  band: LanguageBand,
+  variant: number,
+): string {
+  if (variant === 0) return text;
+  const leads = REGENERATION_LEADS[band];
+  const lead = leads[(variant - 1) % leads.length];
+  return `${lead} ${text}`;
+}
+
 export class MockPromptGenerator implements PromptGenerator {
   async generate(input: GenerationInput): Promise<PromptBatch> {
     const band = languageBand(input);
     const lengths = LENGTHS[input.child.responseLength];
-    let templates = requestedTemplates(input);
-    if ((input.variant ?? 0) % 2 === 1) {
-      templates = [
-        templates[0]!,
-        TEMPLATES["cause_and_effect"]!,
-        TEMPLATES["prediction"]!,
-        templates[3]!,
-      ];
-    }
+    const templates = requestedTemplates(input);
+    const variant = input.variant ?? 0;
     const prompts = templates.map((template, index) => ({
-      text: contextualText(input, template, index, band),
+      text: variedPromptText(
+        contextualText(input, template, index, band),
+        band,
+        variant,
+      ),
       skill: template.skill,
       explanation: template.explanation,
       required: index < 3,
