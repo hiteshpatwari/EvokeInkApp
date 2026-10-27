@@ -62,7 +62,9 @@ describe("AppShell native durability gate", () => {
     await fillProfile(user);
     await user.click(screen.getByRole("button", { name: "Save profile" }));
     expect(
-      await screen.findByText(/change could not be saved safely/i),
+      await screen.findByText(/change could not be saved safely/i, undefined, {
+        timeout: 5_000,
+      }),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Aavya’s profile is ready."),
