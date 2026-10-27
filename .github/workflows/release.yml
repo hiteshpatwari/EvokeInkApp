@@ -117,6 +117,7 @@ jobs:
     env:
       AI_PROVIDER: openai
       AI_MONTHLY_BUDGET_USD: "2.70"
+      AI_ESTIMATED_REQUEST_COST_USD: "0.03"
       OPENAI_TIMEOUT_MS: "45000"
       APP_ALLOWED_ORIGINS: https://evokeink.hiteshpatwari.com,https://evoke-ink-app.hiteshpatwari.workers.dev
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

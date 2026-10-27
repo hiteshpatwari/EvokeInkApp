@@ -85,7 +85,8 @@ separate approval, quota, privacy, retention, and native-attestation gates.
 ### Web-only OpenAI activation
 
 The reviewed production release uses `AI_PROVIDER=openai`, a $2.70 application
-budget, a 45-second bounded provider timeout, and the two owned web origins:
+budget, a conservative $0.03 reservation per generation, a 45-second bounded
+provider timeout, and the two owned web origins:
 `https://evokeink.hiteshpatwari.com` and the direct Workers URL. Native origins
 remain excluded until verified device attestation exists. For each release:
 

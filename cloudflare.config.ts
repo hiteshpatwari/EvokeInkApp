@@ -116,7 +116,7 @@ export default defineConfig({
         environmentText("AI_MONTHLY_BUDGET_USD", "3"),
       ),
       AI_ESTIMATED_REQUEST_COST_USD: bindings.text(
-        environmentText("AI_ESTIMATED_REQUEST_COST_USD", "0.01"),
+        environmentText("AI_ESTIMATED_REQUEST_COST_USD", "0.03"),
       ),
       PROMPT_CONTROL_STORE: bindings.text("cloudflare"),
       PROMPT_CONTROLS: bindings.durableObject({

@@ -334,6 +334,58 @@ describe("Evoke Ink workflow", () => {
     );
   });
 
+  it("locks the submitted reading details while prompt generation is in flight", async () => {
+    const repository = createLocalRepository(localStorage);
+    repository.saveProfile({
+      id: "child-generation-lock",
+      name: "Sample Reader",
+      gradeOrAge: "Grade 5",
+      difficulty: "grade_level",
+      responseLength: "medium",
+      createdAt: "2026-10-12T00:00:00.000Z",
+      updatedAt: "2026-10-12T00:00:00.000Z",
+    });
+    let resolveRequest!: (response: Response) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveRequest = resolve;
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    render(<AppShell />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Create a worksheet" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Load the Prince Caspian example" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Generate 4 prompts" }),
+    );
+
+    expect(screen.getByLabelText("Book title")).toBeDisabled();
+    expect(
+      screen.getByRole("checkbox", { name: "Cause & effect" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Load the Prince Caspian example" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Creating thoughtful prompts…" }),
+    ).toBeDisabled();
+
+    resolveRequest({
+      ok: true,
+      json: async () => ({ prompts: generatedPrompts, provider: "mock" }),
+    } as Response);
+    expect(await screen.findByLabelText("Prompt 1")).toBeInTheDocument();
+  });
+
   it("tracks completed reflections separately from saved worksheets", async () => {
     const repository = createLocalRepository(localStorage);
     const profile: ChildProfile = {

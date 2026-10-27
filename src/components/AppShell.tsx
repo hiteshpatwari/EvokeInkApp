@@ -1370,173 +1370,183 @@ export function AppShell({ storage }: AppShellProps = {}) {
               difficulty.
             </p>
           </div>
-          <form className="form-card" onSubmit={generate}>
-            <div className="demo-strip">
-              <span>Want a quick tour?</span>
-              <button
-                type="button"
-                className="text-button"
-                onClick={loadDemoBook}
-              >
-                Load the Prince Caspian example
-              </button>
-            </div>
-            <div className="form-grid">
-              <label>
-                Book title{" "}
-                <input
-                  required
-                  value={creation.title}
-                  onChange={(event) =>
-                    setCreation({ ...creation, title: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                Author{" "}
-                <input
-                  required
-                  value={creation.author}
-                  onChange={(event) =>
-                    setCreation({ ...creation, author: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                Genre{" "}
-                <select
-                  value={creation.genre}
-                  onChange={(event) =>
-                    setCreation({
-                      ...creation,
-                      genre: event.target.value as Book["genre"],
-                    })
-                  }
+          <form
+            className="form-card"
+            onSubmit={generate}
+            aria-busy={generating}
+          >
+            <fieldset
+              className="generation-controls"
+              aria-label="Reading details and focus skills"
+              disabled={generating}
+            >
+              <div className="demo-strip">
+                <span>Want a quick tour?</span>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={loadDemoBook}
                 >
-                  <option value="fiction">Fiction</option>
-                  <option value="nonfiction">Nonfiction</option>
-                  <option value="biography">Biography</option>
-                  <option value="poetry">Poetry</option>
-                  <option value="other">Other</option>
-                </select>
-              </label>
-              <label>
-                Pages or chapters completed{" "}
-                <input
-                  required
-                  placeholder="1-60, Chapters 1-3, or Complete"
-                  value={creation.progress}
-                  onChange={(event) =>
-                    setCreation({ ...creation, progress: event.target.value })
-                  }
-                />
-              </label>
-            </div>
-            <fieldset className="choice-fieldset">
-              <legend>How specific should the prompts be?</legend>
-              <label className="radio-card">
-                <input
-                  type="radio"
-                  name="specificity"
-                  checked={creation.specificity === "general"}
-                  onChange={() =>
-                    setCreation({ ...creation, specificity: "general" })
-                  }
-                />
-                <span>
-                  <strong>I only want general prompts</strong>
-                  <small>Safest when you have not added notes.</small>
-                </span>
-              </label>
-              <label className="radio-card">
-                <input
-                  type="radio"
-                  name="specificity"
-                  checked={creation.specificity === "notes"}
-                  onChange={() =>
-                    setCreation({ ...creation, specificity: "notes" })
-                  }
-                />
-                <span>
-                  <strong>Use my notes for more specific prompts</strong>
-                  <small>Only parent-supplied facts may be referenced.</small>
-                </span>
-              </label>
-            </fieldset>
-            <div className="form-grid">
-              <label className="full-width">
-                Short summary of what was read{" "}
-                <textarea
-                  rows={3}
-                  value={creation.parentSummary}
-                  onChange={(event) =>
-                    setCreation({
-                      ...creation,
-                      parentSummary: event.target.value,
-                    })
-                  }
-                  placeholder="Optional. Only include details you want reflected in prompts."
-                />
-              </label>
-              <label>
-                Parent notes{" "}
-                <textarea
-                  rows={3}
-                  value={creation.parentNotes}
-                  onChange={(event) =>
-                    setCreation({
-                      ...creation,
-                      parentNotes: event.target.value,
-                    })
-                  }
-                  placeholder="Optional observations or context"
-                />
-              </label>
-              <label>
-                Vocabulary, character, event, or theme notes{" "}
-                <textarea
-                  rows={3}
-                  value={creation.detailNotes}
-                  onChange={(event) =>
-                    setCreation({
-                      ...creation,
-                      detailNotes: event.target.value,
-                    })
-                  }
-                  placeholder="Optional details from this reading"
-                />
-              </label>
-            </div>
-            <fieldset className="skills-fieldset">
-              <legend>Focus skills</legend>
-              <p className="muted">
-                Choose up to two core skills. A concise summary is always
-                included; prediction can replace the optional personal prompt.
-                Choosing another core skill replaces the first selected one.
-              </p>
-              <div className="checkbox-grid">
-                {SKILLS.map(([value, skillLabel]) => (
-                  <label key={value}>
-                    <input
-                      type="checkbox"
-                      checked={creation.skills.includes(value)}
-                      onChange={(event) =>
-                        changeSkillSelection(value, event.target.checked)
-                      }
-                    />
-                    {skillLabel}
-                  </label>
-                ))}
+                  Load the Prince Caspian example
+                </button>
               </div>
-              {skillSelectionNotice && (
-                <p
-                  className="selection-notice"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {skillSelectionNotice}
+              <div className="form-grid">
+                <label>
+                  Book title{" "}
+                  <input
+                    required
+                    value={creation.title}
+                    onChange={(event) =>
+                      setCreation({ ...creation, title: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Author{" "}
+                  <input
+                    required
+                    value={creation.author}
+                    onChange={(event) =>
+                      setCreation({ ...creation, author: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Genre{" "}
+                  <select
+                    value={creation.genre}
+                    onChange={(event) =>
+                      setCreation({
+                        ...creation,
+                        genre: event.target.value as Book["genre"],
+                      })
+                    }
+                  >
+                    <option value="fiction">Fiction</option>
+                    <option value="nonfiction">Nonfiction</option>
+                    <option value="biography">Biography</option>
+                    <option value="poetry">Poetry</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label>
+                  Pages or chapters completed{" "}
+                  <input
+                    required
+                    placeholder="1-60, Chapters 1-3, or Complete"
+                    value={creation.progress}
+                    onChange={(event) =>
+                      setCreation({ ...creation, progress: event.target.value })
+                    }
+                  />
+                </label>
+              </div>
+              <fieldset className="choice-fieldset">
+                <legend>How specific should the prompts be?</legend>
+                <label className="radio-card">
+                  <input
+                    type="radio"
+                    name="specificity"
+                    checked={creation.specificity === "general"}
+                    onChange={() =>
+                      setCreation({ ...creation, specificity: "general" })
+                    }
+                  />
+                  <span>
+                    <strong>I only want general prompts</strong>
+                    <small>Safest when you have not added notes.</small>
+                  </span>
+                </label>
+                <label className="radio-card">
+                  <input
+                    type="radio"
+                    name="specificity"
+                    checked={creation.specificity === "notes"}
+                    onChange={() =>
+                      setCreation({ ...creation, specificity: "notes" })
+                    }
+                  />
+                  <span>
+                    <strong>Use my notes for more specific prompts</strong>
+                    <small>Only parent-supplied facts may be referenced.</small>
+                  </span>
+                </label>
+              </fieldset>
+              <div className="form-grid">
+                <label className="full-width">
+                  Short summary of what was read{" "}
+                  <textarea
+                    rows={3}
+                    value={creation.parentSummary}
+                    onChange={(event) =>
+                      setCreation({
+                        ...creation,
+                        parentSummary: event.target.value,
+                      })
+                    }
+                    placeholder="Optional. Only include details you want reflected in prompts."
+                  />
+                </label>
+                <label>
+                  Parent notes{" "}
+                  <textarea
+                    rows={3}
+                    value={creation.parentNotes}
+                    onChange={(event) =>
+                      setCreation({
+                        ...creation,
+                        parentNotes: event.target.value,
+                      })
+                    }
+                    placeholder="Optional observations or context"
+                  />
+                </label>
+                <label>
+                  Vocabulary, character, event, or theme notes{" "}
+                  <textarea
+                    rows={3}
+                    value={creation.detailNotes}
+                    onChange={(event) =>
+                      setCreation({
+                        ...creation,
+                        detailNotes: event.target.value,
+                      })
+                    }
+                    placeholder="Optional details from this reading"
+                  />
+                </label>
+              </div>
+              <fieldset className="skills-fieldset">
+                <legend>Focus skills</legend>
+                <p className="muted">
+                  Choose up to two core skills. A concise summary is always
+                  included; prediction can replace the optional personal prompt.
+                  Choosing another core skill replaces the first selected one.
                 </p>
-              )}
+                <div className="checkbox-grid">
+                  {SKILLS.map(([value, skillLabel]) => (
+                    <label key={value}>
+                      <input
+                        type="checkbox"
+                        checked={creation.skills.includes(value)}
+                        onChange={(event) =>
+                          changeSkillSelection(value, event.target.checked)
+                        }
+                      />
+                      {skillLabel}
+                    </label>
+                  ))}
+                </div>
+                {skillSelectionNotice && (
+                  <p
+                    className="selection-notice"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {skillSelectionNotice}
+                  </p>
+                )}
+              </fieldset>
             </fieldset>
             <p className="privacy-note">
               When OpenAI generation is enabled, reading profile settings, book

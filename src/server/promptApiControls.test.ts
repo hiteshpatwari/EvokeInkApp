@@ -165,6 +165,15 @@ describe("prompt API controls", () => {
     expect(randomUUID).not.toHaveBeenCalled();
   });
 
+  it("reserves the observed pilot cost when no estimate override is set", () => {
+    vi.stubEnv("AI_PROVIDER", "mock");
+    vi.stubEnv("AI_ESTIMATED_REQUEST_COST_USD", "");
+
+    expect(promptApiConfigFromEnvironment().estimatedRequestCostMicros).toBe(
+      30_000,
+    );
+  });
+
   it("accepts a valid privacy-minimized generation request", async () => {
     const response = await createPromptPostHandler(dependencies())(request());
     expect(response.status).toBe(200);
