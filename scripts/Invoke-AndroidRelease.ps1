@@ -54,9 +54,6 @@ try {
     & corepack pnpm mobile:sync
     if ($LASTEXITCODE -ne 0) { throw 'Capacitor Android synchronization failed.' }
 
-    & corepack pnpm mobile:secrets
-    if ($LASTEXITCODE -ne 0) { throw 'Mobile artifact secret scan failed.' }
-
     if (-not $IsWindows) {
         & chmod '+x' $gradleWrapper
         if ($LASTEXITCODE -ne 0) { throw 'Could not make the Gradle wrapper executable.' }
@@ -67,6 +64,9 @@ try {
     if (-not (Test-Path -LiteralPath $apkPath -PathType Leaf)) {
         throw "Gradle succeeded but the expected APK was not found at $apkPath."
     }
+
+    & corepack pnpm mobile:secrets
+    if ($LASTEXITCODE -ne 0) { throw 'Mobile artifact secret scan failed.' }
 
     $hash = (Get-FileHash -LiteralPath $apkPath -Algorithm SHA256).Hash.ToLowerInvariant()
     $hashPath = "$apkPath.sha256"

@@ -72,6 +72,11 @@ the public home, health, and prompt contracts.
   with a direct-main trigger plus an internal verification job.
 - Local `pnpm release:android` passed: 214 Gradle tasks produced
   `app-debug.apk`; the mobile secret scan passed and SHA-256 was recorded.
+- The first hosted release run passed its full verification job and exposed a
+  clean-run ordering defect: the APK scanner ran before Gradle. The script now
+  assembles before scanning, and the corrected order passed locally. Checkout
+  and setup-node were also advanced to pinned Node 24 action releases after the
+  runner flagged their older Node 20 runtimes.
 - Vinext/Cloudflare production build and `cf deploy --dry-run --prebuilt`
   passed in mock mode.
 - Mobile production build passed using the current public Worker prompt URL;
