@@ -219,10 +219,8 @@ describe("typed response coaching", () => {
       );
     vi.stubGlobal("fetch", fetchMock);
     const user = await openStrictModeResponseReview();
-    await user.type(
-      screen.getByLabelText("Student response"),
-      "The character chose to help because it was fair.",
-    );
+    await user.click(screen.getByLabelText("Student response"));
+    await user.paste("The character chose to help because it was fair.");
     await user.click(screen.getByRole("button", { name: "Get feedback" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -247,10 +245,8 @@ describe("typed response coaching", () => {
     );
     const before = storedState();
     const user = await openResponseReview();
-    await user.type(
-      screen.getByLabelText("Student response"),
-      "A temporary answer that must never be saved.",
-    );
+    await user.click(screen.getByLabelText("Student response"));
+    await user.paste("A temporary answer that must never be saved.");
     await user.click(screen.getByRole("button", { name: "Done" }));
     expect(
       screen.getByRole("region", { name: "Printable worksheet preview" }),
@@ -260,10 +256,8 @@ describe("typed response coaching", () => {
     await user.click(
       screen.getAllByRole("button", { name: "Review a response" })[0]!,
     );
-    await user.type(
-      screen.getByLabelText("Student response"),
-      "Another temporary response.",
-    );
+    await user.click(screen.getByLabelText("Student response"));
+    await user.paste("Another temporary response.");
     const nativeBack = new Event(NATIVE_BACK_EVENT, { cancelable: true });
     act(() => window.dispatchEvent(nativeBack));
     expect(nativeBack.defaultPrevented).toBe(true);
