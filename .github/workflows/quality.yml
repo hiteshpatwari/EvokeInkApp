@@ -50,7 +50,9 @@ jobs:
         run: pnpm typecheck
 
       - name: Test
-        run: pnpm test
+        # jsdom UI suites are intentionally serialized on the two-core hosted
+        # runner so user-event interactions are not starved by other workers.
+        run: pnpm test -- --no-file-parallelism
 
       - name: Build
         run: pnpm build
