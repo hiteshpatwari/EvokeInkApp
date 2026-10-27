@@ -16,10 +16,10 @@ concurrency:
 env:
   AI_PROVIDER: mock
   AI_MONTHLY_BUDGET_USD: "3"
-  APP_ALLOWED_ORIGINS: https://evoke-ink-app.hiteshpatwari.workers.dev,https://localhost,capacitor://localhost
+  APP_ALLOWED_ORIGINS: https://evokeink.hiteshpatwari.com,https://evoke-ink-app.hiteshpatwari.workers.dev,https://localhost,capacitor://localhost
   NEXT_TELEMETRY_DISABLED: "1"
-  PRODUCTION_ORIGIN: https://evoke-ink-app.hiteshpatwari.workers.dev
-  VITE_PROMPT_API_URL: https://evoke-ink-app.hiteshpatwari.workers.dev/api/prompts
+  PRODUCTION_ORIGIN: https://evokeink.hiteshpatwari.com
+  VITE_PROMPT_API_URL: https://evokeink.hiteshpatwari.com/api/prompts
 
 jobs:
   verify:
@@ -118,7 +118,7 @@ jobs:
       AI_PROVIDER: openai
       AI_MONTHLY_BUDGET_USD: "2.70"
       OPENAI_TIMEOUT_MS: "30000"
-      APP_ALLOWED_ORIGINS: https://evoke-ink-app.hiteshpatwari.workers.dev
+      APP_ALLOWED_ORIGINS: https://evokeink.hiteshpatwari.com,https://evoke-ink-app.hiteshpatwari.workers.dev
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       RELEASE_SHA: ${{ github.sha }}

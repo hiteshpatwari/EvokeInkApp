@@ -134,9 +134,7 @@ describe("Evoke Ink workflow", () => {
         name: "Create your first child profile",
       }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Use Aavya demo values" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Use sample values" }));
     expect(screen.getByLabelText("Preferred difficulty")).toHaveValue(
       "advanced",
     );

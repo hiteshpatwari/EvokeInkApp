@@ -1336,7 +1336,7 @@ export function AppShell({ storage }: AppShellProps = {}) {
                 className="secondary-button"
                 onClick={useDemoProfile}
               >
-                Use Aavya demo values
+                Use sample values
               </button>
               <button type="submit" className="primary-button">
                 Save profile
