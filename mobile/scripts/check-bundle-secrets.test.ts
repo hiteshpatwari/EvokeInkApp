@@ -33,6 +33,7 @@ async function createRequiredArtifacts(
   await writeFile(path.join(dist, "index.js"), "safe distribution");
   await writeFile(path.join(assets, "capacitor.config.json"), "{}");
   await writeFile(apk, zipSync(apkEntries));
+  return apk;
 }
 
 afterEach(async () => {
@@ -54,22 +55,24 @@ describe("scanProductionArtifacts", () => {
 
   it("detects a provider secret inside a compressed APK entry", async () => {
     const root = await temporaryMobileRoot();
-    await createRequiredArtifacts(root, {
+    const apk = await createRequiredArtifacts(root, {
       "assets/public/index.js": new TextEncoder().encode(
         "const token = 'sk-proj-compressed-entry-secret';",
       ),
     });
 
-    await expect(scanProductionArtifacts({ mobileRoot: root })).rejects.toThrow(
+    await expect(
+      scanProductionArtifacts({ mobileRoot: root, artifacts: [apk] }),
+    ).rejects.toThrow(
       /Forbidden provider secret marker found.*assets[\\/]public[\\/]index\.js/,
     );
   });
 
   it("passes when all required artifacts contain no provider secret", async () => {
     const root = await temporaryMobileRoot();
-    await createRequiredArtifacts(root);
+    const apk = await createRequiredArtifacts(root);
     await expect(
-      scanProductionArtifacts({ mobileRoot: root }),
+      scanProductionArtifacts({ mobileRoot: root, artifacts: [apk] }),
     ).resolves.toBeUndefined();
   });
 });

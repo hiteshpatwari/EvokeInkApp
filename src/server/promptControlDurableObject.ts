@@ -13,6 +13,7 @@ export interface DurablePromptControlRequest {
   nowMs: number;
   installationLimit: number;
   ipLimit: number;
+  ipHourlyLimit?: number;
   budgetMicros: number;
   estimatedCostMicros: number;
   useProviderBudget: boolean;
@@ -50,6 +51,8 @@ function validateReservation(input: DurablePromptControlRequest): void {
     input.nowMs < 0 ||
     !isPositiveInteger(input.installationLimit) ||
     !isPositiveInteger(input.ipLimit) ||
+    (input.ipHourlyLimit !== undefined &&
+      !isPositiveInteger(input.ipHourlyLimit)) ||
     !isPositiveInteger(input.budgetMicros) ||
     !isPositiveInteger(input.estimatedCostMicros) ||
     typeof input.useProviderBudget !== "boolean"
@@ -61,8 +64,9 @@ function validateReservation(input: DurablePromptControlRequest): void {
 function currentCounter(
   value: StoredCounter | undefined,
   nowMs: number,
+  windowMs = MONTH_MS,
 ): StoredCounter {
-  if (value && nowMs - value.startedAt < MONTH_MS) return value;
+  if (value && nowMs - value.startedAt < windowMs) return value;
   return { count: 0, startedAt: nowMs };
 }
 
@@ -79,12 +83,14 @@ export class PromptControlDurableObjectCore {
     validateReservation(input);
     const installationStorageKey = `installation:${input.installationKey}`;
     const ipStorageKey = `ip:${input.ipKey}`;
+    const ipBurstStorageKey = `ip-hour:${input.ipKey}`;
     const budgetStorageKey = "budget:global";
 
     return this.ctx.storage.transaction(async (transaction) => {
       const stored = await transaction.get([
         installationStorageKey,
         ipStorageKey,
+        ipBurstStorageKey,
         budgetStorageKey,
       ]);
       const installation = currentCounter(
@@ -92,15 +98,27 @@ export class PromptControlDurableObjectCore {
         input.nowMs,
       );
       const ip = currentCounter(stored.get(ipStorageKey), input.nowMs);
+      const ipBurst = currentCounter(
+        stored.get(ipBurstStorageKey),
+        input.nowMs,
+        60 * 60 * 1000,
+      );
       const budget = currentCounter(stored.get(budgetStorageKey), input.nowMs);
 
       if (installation.count >= input.installationLimit) {
         return "installation_quota";
       }
       if (ip.count >= input.ipLimit) return "ip_quota";
+      if (
+        input.ipHourlyLimit !== undefined &&
+        ipBurst.count >= input.ipHourlyLimit
+      ) {
+        return "ip_quota";
+      }
 
       installation.count += 1;
       ip.count += 1;
+      ipBurst.count += 1;
       const budgetWouldOpen =
         input.useProviderBudget &&
         budget.count + input.estimatedCostMicros > input.budgetMicros;
@@ -111,6 +129,7 @@ export class PromptControlDurableObjectCore {
       await transaction.put({
         [installationStorageKey]: installation,
         [ipStorageKey]: ip,
+        [ipBurstStorageKey]: ipBurst,
         [budgetStorageKey]: budget,
       });
       return budgetWouldOpen ? "budget_open" : "allowed";

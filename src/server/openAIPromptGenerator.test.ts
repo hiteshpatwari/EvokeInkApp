@@ -68,18 +68,21 @@ describe("serializeOpenAIContext", () => {
     );
 
     expect(parse).toHaveBeenCalledWith(
-      expect.objectContaining({ store: false }),
+      expect.objectContaining({
+        store: false,
+        instructions: expect.stringMatching(/untrusted reference data/i),
+      }),
     );
   });
 });
 
 describe("openAIRequestPolicy", () => {
-  it("bounds timeout, retries, and output tokens", () => {
+  it("bounds timeout and output tokens and never retries paid requests", () => {
     process.env["OPENAI_TIMEOUT_MS"] = "999999";
     process.env["OPENAI_MAX_RETRIES"] = "99";
     expect(openAIRequestPolicy()).toEqual({
       timeout: 45_000,
-      maxRetries: 2,
+      maxRetries: 0,
       maxOutputTokens: 2_500,
     });
     delete process.env["OPENAI_TIMEOUT_MS"];

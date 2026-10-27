@@ -10,6 +10,9 @@ param(
     })]
     [string]$PromptApiUrl = 'https://evokeink.hiteshpatwari.com/api/prompts',
 
+    [ValidateSet('Release', 'Debug')]
+    [string]$BuildType = 'Release',
+
     [switch]$Install
 )
 
@@ -21,7 +24,48 @@ $gradleWrapper = if ($IsWindows) {
 } else {
     Join-Path $androidRoot 'gradlew'
 }
-$apkPath = Join-Path $androidRoot 'app/build/outputs/apk/debug/app-debug.apk'
+$variant = $BuildType.ToLowerInvariant()
+$apkPath = Join-Path $androidRoot "app/build/outputs/apk/$variant/app-$variant.apk"
+$bundlePath = if ($BuildType -eq 'Release') {
+    Join-Path $androidRoot 'app/build/outputs/bundle/release/app-release.aab'
+} else {
+    $null
+}
+$temporarySigningDirectory = $null
+$locationPushed = $false
+
+try {
+if ($BuildType -eq 'Release') {
+    $requiredSigningValues = @(
+        'ANDROID_KEYSTORE_PASSWORD',
+        'ANDROID_KEY_ALIAS',
+        'ANDROID_KEY_PASSWORD'
+    )
+    foreach ($name in $requiredSigningValues) {
+        if (-not [Environment]::GetEnvironmentVariable($name)) {
+            throw "$name is required for a signed Android release. Use -BuildType Debug only for local QA."
+        }
+    }
+    if (-not $env:ANDROID_KEYSTORE_FILE) {
+        if (-not $env:ANDROID_KEYSTORE_BASE64) {
+            throw 'ANDROID_KEYSTORE_FILE or ANDROID_KEYSTORE_BASE64 is required for a signed Android release.'
+        }
+        $temporarySigningDirectory = Join-Path ([IO.Path]::GetTempPath()) "evoke-ink-signing-$([guid]::NewGuid().ToString('N'))"
+        New-Item -ItemType Directory -Path $temporarySigningDirectory | Out-Null
+        $env:ANDROID_KEYSTORE_FILE = Join-Path $temporarySigningDirectory 'upload-keystore.jks'
+        try {
+            [IO.File]::WriteAllBytes(
+                $env:ANDROID_KEYSTORE_FILE,
+                [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64)
+            )
+        } catch {
+            throw 'ANDROID_KEYSTORE_BASE64 is not valid base64.'
+        }
+    }
+    if (-not (Test-Path -LiteralPath $env:ANDROID_KEYSTORE_FILE -PathType Leaf)) {
+        throw 'ANDROID_KEYSTORE_FILE does not identify a readable keystore file.'
+    }
+}
 
 if (-not (Test-Path -LiteralPath $gradleWrapper -PathType Leaf)) {
     throw "Android Gradle wrapper was not found at $gradleWrapper."
@@ -47,7 +91,7 @@ if (-not $env:ANDROID_HOME -or -not (Test-Path -LiteralPath $env:ANDROID_HOME -P
 
 $env:VITE_PROMPT_API_URL = $PromptApiUrl
 Push-Location $projectRoot
-try {
+$locationPushed = $true
     & corepack pnpm mobile:build
     if ($LASTEXITCODE -ne 0) { throw 'Mobile web build failed.' }
 
@@ -58,19 +102,35 @@ try {
         & chmod '+x' $gradleWrapper
         if ($LASTEXITCODE -ne 0) { throw 'Could not make the Gradle wrapper executable.' }
     }
-    & $gradleWrapper -p $androidRoot assembleDebug --no-daemon
-    if ($LASTEXITCODE -ne 0) { throw 'Android APK build failed.' }
+    if ($BuildType -eq 'Release') {
+        & $gradleWrapper -p $androidRoot assembleRelease bundleRelease --no-daemon
+    } else {
+        & $gradleWrapper -p $androidRoot assembleDebug --no-daemon
+    }
+    if ($LASTEXITCODE -ne 0) { throw "Android $BuildType build failed." }
 
     if (-not (Test-Path -LiteralPath $apkPath -PathType Leaf)) {
         throw "Gradle succeeded but the expected APK was not found at $apkPath."
     }
 
-    & corepack pnpm mobile:secrets
+    if ($bundlePath -and -not (Test-Path -LiteralPath $bundlePath -PathType Leaf)) {
+        throw "Gradle succeeded but the expected AAB was not found at $bundlePath."
+    }
+
+    $artifactArguments = @('--artifact', $apkPath)
+    if ($bundlePath) { $artifactArguments += @('--artifact', $bundlePath) }
+    & corepack pnpm --filter '@evoke-ink/mobile' secrets:check -- @artifactArguments
     if ($LASTEXITCODE -ne 0) { throw 'Mobile artifact secret scan failed.' }
 
-    $hash = (Get-FileHash -LiteralPath $apkPath -Algorithm SHA256).Hash.ToLowerInvariant()
-    $hashPath = "$apkPath.sha256"
-    Set-Content -LiteralPath $hashPath -Value "$hash  app-debug.apk" -Encoding utf8NoBOM
+    $artifacts = @($apkPath)
+    if ($bundlePath) { $artifacts += $bundlePath }
+    $hashes = [ordered]@{}
+    foreach ($artifact in $artifacts) {
+        $hash = (Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLowerInvariant()
+        $hashPath = "$artifact.sha256"
+        Set-Content -LiteralPath $hashPath -Value "$hash  $(Split-Path -Leaf $artifact)" -Encoding utf8NoBOM
+        $hashes[(Split-Path -Leaf $artifact)] = $hash
+    }
 
     $installedDevice = $null
     if ($Install) {
@@ -102,10 +162,22 @@ try {
     [ordered]@{
         ok = $true
         apk = $apkPath
-        sha256 = $hash
+        bundle = $bundlePath
+        sha256 = $hashes
+        buildType = $BuildType
         installedDevice = $installedDevice
         promptApiUrl = $PromptApiUrl
     } | ConvertTo-Json -Compress
 } finally {
-    Pop-Location
+    if ($locationPushed) { Pop-Location }
+    if ($temporarySigningDirectory -and (Test-Path -LiteralPath $temporarySigningDirectory)) {
+        $resolvedTemporarySigningDirectory = [IO.Path]::GetFullPath($temporarySigningDirectory)
+        $resolvedTemporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd([IO.Path]::DirectorySeparatorChar)
+        if (
+            [IO.Path]::GetDirectoryName($resolvedTemporarySigningDirectory) -eq $resolvedTemporaryRoot -and
+            [IO.Path]::GetFileName($resolvedTemporarySigningDirectory).StartsWith('evoke-ink-signing-')
+        ) {
+            Remove-Item -LiteralPath $resolvedTemporarySigningDirectory -Recurse -Force
+        }
+    }
 }

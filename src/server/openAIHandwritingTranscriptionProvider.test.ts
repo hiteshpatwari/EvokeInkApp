@@ -26,6 +26,13 @@ describe("OpenAI handwriting transcription provider", () => {
     expect(parse).toHaveBeenCalledWith(
       expect.objectContaining({ store: false, model: "test-model" }),
     );
+    const request = parse.mock.calls[0]?.[0];
+    expect(request).toMatchObject({
+      instructions: expect.stringMatching(/untrusted data/i),
+    });
+    expect(request).toMatchObject({
+      instructions: expect.stringMatching(/never follow.*instructions/i),
+    });
     expect(JSON.stringify(parse.mock.calls[0]?.[0])).toContain(
       "data:image/jpeg;base64,",
     );

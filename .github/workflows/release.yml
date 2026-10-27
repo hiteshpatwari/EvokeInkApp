@@ -62,10 +62,17 @@ jobs:
         run: pnpm build
 
   android-package:
-    name: Build Android APK
+    name: Build signed Android release
+    if: vars.ENABLE_ANDROID_RELEASE == 'true'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: production
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - name: Check out verified commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,27 +97,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Android APK and scan bundled assets
+      - name: Build signed Android AAB and APK and scan bundled assets
         shell: pwsh
         run: ./scripts/Invoke-AndroidRelease.ps1
 
-      - name: Upload Android APK
+      - name: Upload signed Android release artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: evoke-ink-android-${{ github.sha }}
           path: |
-            mobile/android/app/build/outputs/apk/debug/app-debug.apk
-            mobile/android/app/build/outputs/apk/debug/app-debug.apk.sha256
+            mobile/android/app/build/outputs/apk/release/app-release.apk
+            mobile/android/app/build/outputs/apk/release/app-release.apk.sha256
+            mobile/android/app/build/outputs/bundle/release/app-release.aab
+            mobile/android/app/build/outputs/bundle/release/app-release.aab.sha256
           if-no-files-found: error
           retention-days: 30
 
   deploy-web:
     name: Deploy and probe Cloudflare
     if: >-
-      needs.android-package.result == 'success' &&
       github.ref == 'refs/heads/main' &&
       vars.ENABLE_PRODUCTION_DEPLOY == 'true'
-    needs: android-package
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
@@ -119,6 +127,9 @@ jobs:
       AI_MONTHLY_BUDGET_USD: "2.70"
       AI_ESTIMATED_REQUEST_COST_USD: "0.03"
       OPENAI_TIMEOUT_MS: "45000"
+      OPENAI_MAX_RETRIES: "0"
+      AI_IP_MONTHLY_LIMIT: "40"
+      AI_IP_HOURLY_LIMIT: "5"
       APP_ALLOWED_ORIGINS: https://evokeink.hiteshpatwari.com,https://evoke-ink-app.hiteshpatwari.workers.dev
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

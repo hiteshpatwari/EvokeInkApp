@@ -414,22 +414,24 @@ export function createHandwritingTranscriptionPostHandler(
         jsonError("A valid installation identity is required.", 400),
       );
     }
+    // Disabled transcription must reject before consuming attacker-controlled
+    // image bytes. Parsing is intentionally reserved for an approved provider.
+    if (dependencies.config.providerName === "mock") {
+      record(503, "provider_unavailable", "mock");
+      return finish(
+        jsonError(
+          "Automatic handwriting reading is not available yet. Type the response instead.",
+          503,
+          "transcription_unavailable",
+        ),
+      );
+    }
     try {
       const image = await imageFromRequest(
         request,
         dependencies.config.maxBodyBytes,
         dependencies.config.maxImageBytes,
       );
-      if (dependencies.config.providerName === "mock") {
-        record(503, "provider_unavailable", "mock");
-        return finish(
-          jsonError(
-            "Automatic handwriting reading is not available yet. Type the response instead.",
-            503,
-            "transcription_unavailable",
-          ),
-        );
-      }
       const [installationKey, ipKey] = await Promise.all([
         quotaKey(
           `transcription:${token!}`,
@@ -561,7 +563,7 @@ export function handwritingTranscriptionApiConfigFromEnvironment(): HandwritingT
       "HANDWRITING_TRANSCRIPTION_INSTALLATION_MONTHLY_LIMIT",
       20,
     ),
-    ipLimit: positiveInteger("HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT", 200),
+    ipLimit: positiveInteger("HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT", 20),
     monthlyBudgetMicros: usdMicros(
       "HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD",
       50,

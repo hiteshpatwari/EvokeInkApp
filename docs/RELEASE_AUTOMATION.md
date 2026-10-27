@@ -2,10 +2,12 @@
 
 Every push to `main` triggers `.github/workflows/release.yml`. The workflow first
 runs its own formatting, lint, type, test, and web-build gate. Only a verified
-commit proceeds to the mobile and deployment jobs. It builds the Capacitor
-assets, scans them for packaged secrets, creates an Android debug APK, records
-its SHA-256 digest, and keeps both files as a GitHub Actions artifact for 30
-days.
+commit may proceed independently to web deployment and Android packaging. Web
+deployment is not blocked by Android signing. When `ENABLE_ANDROID_RELEASE` is
+`true`, the mobile job builds signed, non-debuggable, minified release APK and
+AAB artifacts, scans both for packaged secrets, records SHA-256 digests, and
+keeps them as GitHub Actions artifacts for 30 days. Debug APKs are local-QA
+artifacts only and are never published by the release workflow.
 
 Web deployment is opt-in until the repository has its Cloudflare credentials.
 When enabled, the same workflow builds and dry-runs the Worker, deploys the
@@ -14,9 +16,7 @@ and prompt contracts. The workflow never receives an OpenAI key.
 
 ## 1. Add OpenAI keys
 
-The production release currently deploys with `AI_PROVIDER=mock`. Adding an
-OpenAI key prepares the Worker for a later reviewed provider change, but does
-not enable live OpenAI requests by itself. Do not put the key in GitHub Actions,
+The production web release uses the reviewed OpenAI path. Do not put its key in GitHub Actions,
 the repository, a local tracked file, a `NEXT_PUBLIC_` variable, the Android
 application, or the browser bundle.
 
@@ -86,7 +86,8 @@ separate approval, quota, privacy, retention, and native-attestation gates.
 
 The reviewed production release uses `AI_PROVIDER=openai`, a $2.70 application
 budget, a conservative $0.03 reservation per generation, a 45-second bounded
-provider timeout, and the two owned web origins:
+provider timeout, no implicit paid retries, a five-request hourly IP limit, a
+40-request monthly IP limit, and the two owned web origins:
 `https://evokeink.hiteshpatwari.com` and the direct Workers URL. Native origins
 remain excluded until verified device attestation exists. For each release:
 
@@ -181,28 +182,76 @@ gh variable set ENABLE_PRODUCTION_DEPLOY --body true --repo hiteshpatwari/EvokeI
    gh workflow run release.yml --repo hiteshpatwari/EvokeInkApp
    ```
 
-3. Wait for **Verify release commit**, **Build Android APK**, and
-   **Deploy and probe Cloudflare** to pass.
+3. Wait for **Verify release commit** and **Deploy and probe Cloudflare** to
+   pass. **Build signed Android release** also runs when
+   `ENABLE_ANDROID_RELEASE=true`.
 4. Open the public Worker URL and create one deterministic mock worksheet.
 5. If deployment must be stopped, change `ENABLE_PRODUCTION_DEPLOY` to `false`.
-   Android artifacts and validation continue, while Cloudflare deployment is
-   skipped.
+   Cloudflare deployment is skipped. Android packaging is controlled separately
+   by `ENABLE_ANDROID_RELEASE`.
 
 The `production` GitHub environment may have optional reviewers. Adding a
 required reviewer creates a manual approval for every deployment, so leave the
 environment without required reviewers when fully automatic mock deployment is
 desired.
 
+## 3. Configure signed Android releases
+
+Do this before setting `ENABLE_ANDROID_RELEASE=true`. The upload keystore is a
+long-lived owner-controlled credential. Losing it can prevent future Play Store
+updates; exposing it requires rotation through the applicable Play process.
+
+1. Create the upload keystore on an owner-controlled workstation. Keep the
+   generated file outside the repository:
+
+   ```powershell
+   keytool -genkeypair -v -keystore evoke-ink-upload.jks -alias evoke-ink-upload -keyalg RSA -keysize 4096 -validity 10000
+   ```
+
+2. Store the keystore and passwords in a password manager and an encrypted
+   offline backup. Never commit them.
+3. Convert the keystore to a single-line base64 value without printing it:
+
+   ```powershell
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path .\evoke-ink-upload.jks))) | Set-Clipboard
+   ```
+
+4. In GitHub, open **Settings → Environments → production → Environment
+   secrets** and create:
+   - `ANDROID_KEYSTORE_BASE64`
+   - `ANDROID_KEYSTORE_PASSWORD`
+   - `ANDROID_KEY_ALIAS`
+   - `ANDROID_KEY_PASSWORD`
+5. Under **Settings → Secrets and variables → Actions → Variables**, create
+   `ENABLE_ANDROID_RELEASE` with value `true` only after all four secrets are
+   present.
+6. Run Release Automation. Download the resulting APK, AAB, and SHA-256 files.
+   Verify the APK signature with `apksigner verify --verbose --print-certs` and
+   upload the AAB through the Play Console internal-testing track before wider
+   distribution.
+
+The workflow reconstructs the keystore only in a unique runner temporary
+directory and removes it after the build. The keystore is not uploaded as an
+artifact.
+
 ## Local Android build and installation
 
-Build an APK and print its path and SHA-256 digest:
+For a signed local release, set `ANDROID_KEYSTORE_FILE`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`,
+then build the release APK and AAB and print both SHA-256 digests:
 
 ```powershell
 pnpm release:android
 ```
 
-With exactly one authorized Android device connected, build, install, and launch
-the app:
+For local QA without release credentials, build an explicitly debug-only APK:
+
+```powershell
+pnpm release:android:qa
+```
+
+With exactly one authorized Android device connected and release signing
+configured, build, install, and launch the signed release APK:
 
 ```powershell
 pnpm release:android:install
@@ -210,7 +259,8 @@ pnpm release:android:install
 
 The script discovers a local Microsoft Java 21 installation on Windows when
 `JAVA_HOME` is unset. It validates `ANDROID_HOME`, builds the mobile bundle,
-synchronizes Capacitor, scans the bundle for secrets, assembles the debug APK,
+synchronizes Capacitor, scans the selected artifacts for secrets, assembles the
+signed release APK and AAB,
 and refuses an ambiguous install when zero or multiple devices are connected.
 
 ## Manual boundaries

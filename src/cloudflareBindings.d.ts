@@ -11,6 +11,7 @@ declare module "cloudflare:workers" {
     nowMs: number;
     installationLimit: number;
     ipLimit: number;
+    ipHourlyLimit?: number;
     budgetMicros: number;
     estimatedCostMicros: number;
     useProviderBudget: boolean;

@@ -47,6 +47,7 @@ function reservation(overrides: Record<string, unknown> = {}) {
     nowMs: Date.parse("2026-10-20T12:00:00.000Z"),
     installationLimit: 20,
     ipLimit: 200,
+    ipHourlyLimit: 200,
     budgetMicros: 250_000_000,
     estimatedCostMicros: 10_000,
     useProviderBudget: true,
@@ -81,6 +82,7 @@ describe("PromptControlDurableObject", () => {
           reservation({
             installationLimit: 100,
             ipLimit: 100,
+            ipHourlyLimit: 100,
             budgetMicros: 50_000,
           }),
         ),
@@ -91,6 +93,27 @@ describe("PromptControlDurableObject", () => {
     expect(results.filter((result) => result === "budget_open")).toHaveLength(
       35,
     );
+  });
+
+  it("stops a burst from one IP before it can consume the shared budget", async () => {
+    const durableObject = new PromptControlDurableObjectCore({
+      storage: new TransactionalMemoryStorage(),
+    });
+
+    const results = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        durableObject.reserve(
+          reservation({
+            installationLimit: 100,
+            ipLimit: 100,
+            ipHourlyLimit: 5,
+          }),
+        ),
+      ),
+    );
+
+    expect(results.filter((result) => result === "allowed")).toHaveLength(5);
+    expect(results.filter((result) => result === "ip_quota")).toHaveLength(5);
   });
 
   it("resets quota and budget windows after thirty days", async () => {

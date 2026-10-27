@@ -64,9 +64,7 @@ export default defineConfig({
       OPENAI_TIMEOUT_MS: bindings.text(
         environmentText("OPENAI_TIMEOUT_MS", "15000"),
       ),
-      OPENAI_MAX_RETRIES: bindings.text(
-        environmentText("OPENAI_MAX_RETRIES", "1"),
-      ),
+      OPENAI_MAX_RETRIES: bindings.text("0"),
       HANDWRITING_TRANSCRIPTION_PROVIDER: bindings.text(
         transcriptionProviderName,
       ),
@@ -89,7 +87,7 @@ export default defineConfig({
         ),
       ),
       HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT: bindings.text(
-        environmentText("HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT", "200"),
+        environmentText("HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT", "20"),
       ),
       HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD: bindings.text(
         environmentText("HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD", "50"),
@@ -110,7 +108,10 @@ export default defineConfig({
         environmentText("AI_INSTALLATION_MONTHLY_LIMIT", "20"),
       ),
       AI_IP_MONTHLY_LIMIT: bindings.text(
-        environmentText("AI_IP_MONTHLY_LIMIT", "200"),
+        environmentText("AI_IP_MONTHLY_LIMIT", "40"),
+      ),
+      AI_IP_HOURLY_LIMIT: bindings.text(
+        environmentText("AI_IP_HOURLY_LIMIT", "5"),
       ),
       AI_MONTHLY_BUDGET_USD: bindings.text(
         environmentText("AI_MONTHLY_BUDGET_USD", "3"),

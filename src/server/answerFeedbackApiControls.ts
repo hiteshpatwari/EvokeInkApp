@@ -452,7 +452,7 @@ export function answerFeedbackApiConfigFromEnvironment(): AnswerFeedbackApiConfi
       "ANSWER_FEEDBACK_INSTALLATION_MONTHLY_LIMIT",
       30,
     ),
-    ipLimit: positiveSafeInteger("ANSWER_FEEDBACK_IP_MONTHLY_LIMIT", 300),
+    ipLimit: positiveSafeInteger("ANSWER_FEEDBACK_IP_MONTHLY_LIMIT", 100),
     monthlyBudgetMicros: positiveUsdMicros(
       "ANSWER_FEEDBACK_MONTHLY_BUDGET_USD",
       50,

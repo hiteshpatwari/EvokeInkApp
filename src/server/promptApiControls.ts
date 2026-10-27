@@ -23,6 +23,7 @@ export interface PromptApiConfig {
   maxBodyBytes: number;
   installationLimit: number;
   ipLimit: number;
+  ipHourlyLimit: number;
   monthlyBudgetMicros: number;
   estimatedRequestCostMicros: number;
   quotaHashSecret: string;
@@ -35,6 +36,7 @@ export interface PromptControlStore {
     now: Date;
     installationLimit: number;
     ipLimit: number;
+    ipHourlyLimit: number;
     budgetMicros: number;
     estimatedCostMicros: number;
     useProviderBudget: boolean;
@@ -72,6 +74,7 @@ interface Counter {
 export class InMemoryPromptControlStore implements PromptControlStore {
   private readonly installations = new Map<string, Counter>();
   private readonly ips = new Map<string, Counter>();
+  private readonly ipBursts = new Map<string, Counter>();
   private budget: Counter = { count: 0, startedAt: 0 };
 
   reserve(input: Parameters<PromptControlStore["reserve"]>[0]) {
@@ -82,15 +85,23 @@ export class InMemoryPromptControlStore implements PromptControlStore {
       now,
     );
     const ip = this.currentCounter(this.ips, input.ipKey, now);
+    const ipBurst = this.currentCounter(
+      this.ipBursts,
+      input.ipKey,
+      now,
+      60 * 60 * 1000,
+    );
     if (installation.count >= input.installationLimit)
       return "installation_quota" as const;
     if (ip.count >= input.ipLimit) return "ip_quota" as const;
+    if (ipBurst.count >= input.ipHourlyLimit) return "ip_quota" as const;
 
     if (now - this.budget.startedAt >= MONTH_MS) {
       this.budget = { count: 0, startedAt: now };
     }
     installation.count += 1;
     ip.count += 1;
+    ipBurst.count += 1;
     if (
       input.useProviderBudget &&
       this.budget.count + input.estimatedCostMicros > input.budgetMicros
@@ -106,9 +117,10 @@ export class InMemoryPromptControlStore implements PromptControlStore {
     counters: Map<string, Counter>,
     key: string,
     now: number,
+    windowMs = MONTH_MS,
   ): Counter {
     const current = counters.get(key);
-    if (current && now - current.startedAt < MONTH_MS) return current;
+    if (current && now - current.startedAt < windowMs) return current;
     const next = { count: 0, startedAt: now };
     counters.set(key, next);
     return next;
@@ -335,6 +347,7 @@ export function createPromptPostHandler(dependencies: PromptApiDependencies) {
               now: (dependencies.now ?? (() => new Date()))(),
               installationLimit: dependencies.config.installationLimit,
               ipLimit: dependencies.config.ipLimit,
+              ipHourlyLimit: dependencies.config.ipHourlyLimit,
               budgetMicros: dependencies.config.monthlyBudgetMicros,
               estimatedCostMicros:
                 dependencies.config.estimatedRequestCostMicros,
@@ -456,7 +469,10 @@ export function promptApiConfigFromEnvironment(): PromptApiConfig {
       "AI_INSTALLATION_MONTHLY_LIMIT",
       20,
     ),
-    ipLimit: numberFromEnvironment("AI_IP_MONTHLY_LIMIT", 200),
+    // Keep one network below half of the initial $2.70 / $0.03 global
+    // capacity so a single caller cannot consume the shared pilot allowance.
+    ipLimit: numberFromEnvironment("AI_IP_MONTHLY_LIMIT", 40),
+    ipHourlyLimit: numberFromEnvironment("AI_IP_HOURLY_LIMIT", 5),
     monthlyBudgetMicros: Math.round(
       numberFromEnvironment("AI_MONTHLY_BUDGET_USD", 3) * 1_000_000,
     ),

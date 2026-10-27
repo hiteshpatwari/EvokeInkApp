@@ -89,21 +89,39 @@ afterEach(() => {
 });
 
 describe("handwriting transcription API", () => {
-  it("truthfully returns unavailable in mock mode after validating the image", async () => {
+  it("truthfully returns unavailable in mock mode without reading the image", async () => {
     const events = { record: vi.fn() };
     const handler = createHandwritingTranscriptionPostHandler({
       controls: new InMemoryHandwritingTranscriptionControlStore(),
       config: config(),
       events,
     });
-    const response = await handler(multipart());
+    const unreadRequest = new Request(
+      "https://read.example/api/transcriptions",
+      {
+        method: "POST",
+        headers: {
+          Origin: "https://read.example",
+          "X-Installation-Token": token,
+          "Content-Type": "multipart/form-data; boundary=unused",
+        },
+        body: "body must remain unread",
+      },
+    );
+    const formData = vi.spyOn(unreadRequest, "formData");
+    const response = await handler(unreadRequest);
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({
       code: "transcription_unavailable",
     });
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(JSON.stringify(events.record.mock.calls)).not.toMatch(
-      /Student|answer\.jpg|ffd8/i,
+    expect(formData).not.toHaveBeenCalled();
+    expect(events.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        route: "/api/transcriptions",
+        status: 503,
+        errorCategory: "provider_unavailable",
+      }),
     );
   });
 
@@ -129,7 +147,7 @@ describe("handwriting transcription API", () => {
   ])("rejects %s", async (_label, invalidRequest) => {
     const handler = createHandwritingTranscriptionPostHandler({
       controls: new InMemoryHandwritingTranscriptionControlStore(),
-      config: config(),
+      config: config({ providerName: "openai" }),
     });
     expect((await handler(invalidRequest)).status).toBe(400);
   });

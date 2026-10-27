@@ -10,11 +10,19 @@ minimal owner action.
 
 The product and repository are now named **Evoke Ink** / `EvokeInkApp`; the
 Cloudflare Worker is `evoke-ink-app`. Release automation is enabled on `main`
-and has passed its complete hosted path: release quality gate, Android debug APK
-build, bundled-secret scan, SHA-256 generation, 30-day artifact upload,
-Cloudflare mock deployment, and public home/health/prompt probes. The required
-GitHub Cloudflare secrets and enable variable are configured. The public Worker
-serves Evoke Ink branding and the old `read-and-reflect` Worker URL returns 404.
+and has passed its complete hosted web path. Android publication now requires
+an owner-controlled upload keystore and produces signed, non-debuggable,
+minified APK and AAB artifacts; debug APKs remain local QA only. The signed
+path has passed locally with a disposable test keystore, secret scans, SHA-256
+generation, and APK signature verification. Web release automation still covers
+Cloudflare deployment, and public home/health/prompt probes. Web prompt
+generation now uses OpenAI with a $2.70 in-app ceiling and a 45-second bounded
+timeout, no implicit retries, a five-request hourly IP limit, and a 40-request
+monthly IP limit. Both `https://evokeink.hiteshpatwari.com` and the direct Workers URL
+are approved web origins; the custom domain is canonical for release probes and
+Android API packaging. Native origins remain excluded. The required GitHub Cloudflare secrets
+and enable variable are configured. The public Worker serves Evoke Ink branding
+and the old `read-and-reflect` Worker URL returns 404.
 
 `next-env.d.ts` is now generated and ignored as Next.js recommends. A tracked
 `vinext-env.d.ts` owns the vinext augmentation, and `typecheck` explicitly runs
@@ -143,21 +151,91 @@ serves Evoke Ink branding and the old `read-and-reflect` Worker URL returns 404.
   breakpoint. Narrow navigation retained exactly two icon-only controls with
   no horizontal overflow; the 38 px logo remained legible.
 - Final UX designer verdict: pass. Final independent code review: pass.
+- Fixed prompt regeneration so each prompt owns a monotonically increasing
+  variant counter. Deterministic mock regeneration now preserves the selected
+  skill plan while changing the visible wording; an unchanged provider result
+  is reported honestly instead of claiming that the prompt was refreshed.
+- Replaced the disabled-at-two focus-skill interaction with direct selection:
+  choosing another core skill replaces the oldest selected core skill and an
+  accessible inline status explains the change. Prediction remains the
+  independent optional fourth-prompt choice.
+- Focused regeneration/skill regressions passed (22 tests). Full serialized
+  Vitest passed (49 files / 306 tests), as did root/mobile typecheck, lint with
+  warnings denied, scoped Prettier, `git diff --check`, and the Next.js
+  production build. A live local browser check confirmed enabled alternative
+  skills, replacement feedback, and two visibly distinct consecutive
+  regenerations.
+- Release Automation run `40581611129` passed for commit `ad84be0`: the hosted
+  release gate, Android APK build and bundled-secret scan, artifact upload,
+  Cloudflare deployment, and public synthetic probes all completed successfully.
+- The first OpenAI activation deployment (`52208b5`) correctly failed its live
+  no-fallback probe because an outer 15-second fallback timer ignored the
+  configured provider timeout. Traffic was restored to verified mock version
+  `8c0beb46-15f8-4d74-ac2f-70a55a99d03b`; the rollback command was updated for
+  the current Cloudflare CLI. The timer now uses the same bounded 30-second
+  OpenAI policy. A local real-provider run then returned `provider: openai` and
+  `fallback: false` in 15.35 seconds.
+- Release Automation run `40586808335` passed at commit `d972ac3`, including
+  308 tests, Android artifact build/scan, web-only OpenAI deployment, and a live
+  synthetic OpenAI/no-fallback probe. An independent public request returned
+  HTTP 200, four prompts (three required), `provider: openai`,
+  `fallback: false`, and `Cache-Control: no-store` in 15.17 seconds.
+- Replaced the child-specific profile helper label with **Use sample values**;
+  the seeded values remain available without naming the demo child in the UI.
+  Added the owned `https://evokeink.hiteshpatwari.com` origin alongside the
+  direct Workers URL and made it the canonical probe/mobile API hostname.
+- OpenAI production latency was observed near the former 30-second ceiling
+  (one custom-domain probe fell back while a direct-origin request succeeded in
+  29.34 seconds). The bounded provider and outer fallback policy is now 45
+  seconds. Release Automation run `40589089163` passed at commit `39435ee`,
+  including Android packaging, custom-domain deployment, and a real
+  OpenAI/no-fallback probe. Browser verification on the deployed custom domain
+  confirmed the **Use sample values** control.
+- Prompt-creation inputs are now natively disabled as one field group while a
+  generation request is in flight, and the form exposes `aria-busy`. This locks
+  book details, notes, specificity, demo loading, and focus-skill selection to
+  the exact submitted snapshot until the request finishes. A delayed-request
+  integration regression passed.
+- The observed pilot cost was $0.03 for one generation, so the default and
+  production `AI_ESTIMATED_REQUEST_COST_USD` reservation now uses $0.03 rather
+  than $0.01. At the unchanged $2.70 application ceiling, this conservatively
+  reserves capacity for approximately 90 generations per 30-day budget window.
+- Release Automation run `40593552653` passed at commit `93604c9`: full hosted
+  checks, Android artifact build/scan, custom-domain deployment, and the single
+  paid OpenAI/no-fallback probe all succeeded. A fresh deployed browser session
+  confirmed **Use sample values**; no additional paid UI generation was sent.
+- Completed the security-audit remediation pass. Disabled transcription now
+  rejects before reading image bytes; OpenAI transcription and prompt context
+  treat embedded text as untrusted data; the browser uses per-request nonce CSP
+  without `unsafe-inline`; Android cloud backup is disabled; hidden OpenAI
+  retries are disabled; and dependency overrides reduce `pnpm audit` to zero
+  known vulnerabilities.
+- Replaced release-workflow debug APK publication with an opt-in signed release
+  APK/AAB job. A disposable local signing key proved R8 shrinking, APK/AAB
+  creation, artifact secret scans, hashes, and APK v2 signature verification.
+  The disposable key was removed afterward.
+- Security regression/full validation passed: 51 files / 314 tests, root/mobile
+  types, lint, formatting, diff check, Next and vinext builds, Cloudflare deploy
+  dry-run, dependency audit, local QA APK scan, signed release build/scan, and
+  live vinext nonce-header inspection.
 
 ## Open issues and blockers
 
-- OpenAI remains intentionally disabled (`AI_PROVIDER=mock`). Live-provider
-  activation still requires the documented web-only review and explicit owner
-  decision; the deployed mock path is healthy without consuming OpenAI spend.
-- The automated Android artifact is debug-signed. Play release signing, account
-  ownership, listing approval, and submission remain owner-controlled work.
+- OpenAI is enabled only for the production web origin. Android/native origins
+  intentionally receive no live provider access until verified device
+  attestation exists.
+- Production Android publication remains disabled until the owner creates and
+  stores the four upload-signing secrets and sets `ENABLE_ANDROID_RELEASE=true`.
+  Play account ownership, listing approval, and submission remain owner work.
 - Physical-device checks for enlarged system text and safe-area behavior remain
   release acceptance work; browser/native emulation passed.
 - Existing transcription provider/privacy gates, native attestation requirement,
-  dependency findings, and the mobile bundle-size warning remain unchanged.
+  and the mobile bundle-size warning remain. The dependency findings are resolved.
 
 ## Immediate next action
 
-Complete the documented web-only review. If it passes, explicitly activate the
-OpenAI provider under the approved $3 pilot budget and rerun the provider-aware
-acceptance checks. Otherwise keep the current healthy deterministic mock release.
+Create and escrow the Android upload keystore, add the four production
+environment secrets documented in `docs/RELEASE_AUTOMATION.md`, and enable
+`ENABLE_ANDROID_RELEASE` when ready. Continue monitoring the OpenAI $3 hard
+limit; do not enable native or handwriting-provider traffic until its separate
+release gates are satisfied.

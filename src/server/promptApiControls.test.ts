@@ -75,6 +75,7 @@ function dependencies(
       maxBodyBytes: 12_000,
       installationLimit: 20,
       ipLimit: 200,
+      ipHourlyLimit: 200,
       monthlyBudgetMicros: 250_000_000,
       estimatedRequestCostMicros: 10_000,
       quotaHashSecret: "test-only-quota-key",

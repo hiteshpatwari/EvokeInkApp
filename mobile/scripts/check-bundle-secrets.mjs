@@ -51,18 +51,20 @@ function safeArchiveTarget(extractionRoot, archivePath) {
     /^[A-Za-z]:/.test(normalized) ||
     normalized.split("/").includes("..")
   ) {
-    throw new Error(`Unsafe APK entry path: ${archivePath}`);
+    throw new Error(`Unsafe mobile artifact entry path: ${archivePath}`);
   }
   const target = path.resolve(extractionRoot, normalized);
   const prefix = `${path.resolve(extractionRoot)}${path.sep}`;
   if (!target.startsWith(prefix)) {
-    throw new Error(`APK entry escapes extraction directory: ${archivePath}`);
+    throw new Error(
+      `Mobile artifact entry escapes extraction directory: ${archivePath}`,
+    );
   }
   return target;
 }
 
-async function extractApk(apk, extractionRoot) {
-  const entries = unzipSync(new Uint8Array(await readFile(apk)));
+async function extractArchive(artifact, extractionRoot) {
+  const entries = unzipSync(new Uint8Array(await readFile(artifact)));
   for (const [archivePath, contents] of Object.entries(entries)) {
     const target = safeArchiveTarget(extractionRoot, archivePath);
     if (archivePath.endsWith("/")) {
@@ -100,32 +102,47 @@ function assertOwnedTemporaryDirectory(directory) {
   }
 }
 
-export async function scanProductionArtifacts({ mobileRoot }) {
+export async function scanProductionArtifacts({ mobileRoot, artifacts = [] }) {
   const resolvedMobileRoot = path.resolve(mobileRoot);
   const dist = path.join(resolvedMobileRoot, "dist");
   const synchronizedAssets = path.join(
     resolvedMobileRoot,
     "android/app/src/main/assets",
   );
-  const apk = path.join(
-    resolvedMobileRoot,
-    "android/app/build/outputs/apk/debug/app-debug.apk",
-  );
+  const artifactPaths = artifacts.map((artifact) => path.resolve(artifact));
 
   await requireDirectory(dist, "mobile build");
   await requireDirectory(synchronizedAssets, "synchronized Android assets");
-  await requireFile(apk, "debug APK");
+  if (artifactPaths.length === 0) {
+    throw new Error(
+      "At least one APK or AAB artifact is required for scanning.",
+    );
+  }
+  for (const artifact of artifactPaths) {
+    if (!artifact.startsWith(`${resolvedMobileRoot}${path.sep}`)) {
+      throw new Error(
+        `Mobile artifact is outside the mobile project: ${artifact}`,
+      );
+    }
+    await requireFile(artifact, "mobile artifact");
+  }
 
   const extractionRoot = await mkdtemp(
     path.join(os.tmpdir(), "read-reflect-apk-scan-"),
   );
   try {
-    await extractApk(apk, extractionRoot);
+    const extractedArtifacts = [];
+    for (const [index, artifact] of artifactPaths.entries()) {
+      const extractionDirectory = path.join(extractionRoot, String(index));
+      await mkdir(extractionDirectory, { recursive: true });
+      await extractArchive(artifact, extractionDirectory);
+      extractedArtifacts.push(...(await files(extractionDirectory)));
+    }
     await scanFiles(
       [
         ...(await files(dist)),
         ...(await files(synchronizedAssets)),
-        ...(await files(extractionRoot)),
+        ...extractedArtifacts,
       ],
       resolvedMobileRoot,
     );
@@ -141,6 +158,15 @@ const invokedScript = process.argv[1]
 
 if (invokedScript) {
   const mobileRoot = path.resolve(import.meta.dirname, "..");
-  await scanProductionArtifacts({ mobileRoot });
+  const artifacts = [];
+  for (let index = 2; index < process.argv.length; index += 1) {
+    if (process.argv[index] === "--") continue;
+    if (process.argv[index] !== "--artifact" || !process.argv[index + 1]) {
+      throw new Error("Use --artifact <APK-or-AAB-path> for each artifact.");
+    }
+    artifacts.push(process.argv[index + 1]);
+    index += 1;
+  }
+  await scanProductionArtifacts({ mobileRoot, artifacts });
   console.log("Mobile production artifact secret scan passed.");
 }
