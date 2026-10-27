@@ -8,8 +8,9 @@ minimal owner action.
 
 ## Current status
 
-Release automation is committed on `main` and has passed its hosted quality and
-Android artifact path. Every push to
+The product and repository are now named **Evoke Ink** / `EvokeInkApp`; the
+Cloudflare Worker is `evoke-ink-app`. Release automation is committed on `main`
+and has passed its hosted quality and Android artifact path. Every push to
 `main` receives an independent release quality gate, an Android debug APK build,
 a bundled-secret scan, SHA-256 generation, and a 30-day GitHub artifact. The web
 job becomes automatic after two Cloudflare repository secrets and one enable
@@ -60,10 +61,20 @@ the public home, health, and prompt contracts.
   in Ollama, but both runs drifted into unrelated Mobbin tasks. They were stopped
   before modifying the workspace; implementation was completed by a scoped
   worker and independently reviewed instead.
+- Renamed the visible web/mobile product, metadata, PDF heading, share title,
+  backup filename, package/workspace labels, Android artifact, Worker target,
+  release URLs, operational scripts, and active documentation to Evoke Ink.
+  Preserved the Android application ID, local-storage keys, native migration
+  key, and `read-and-reflect-backup` format marker so installed-app identity and
+  existing user data remain compatible.
+- Changed prepared OpenAI credentials to unconditional Cloudflare secret
+  bindings even while mock mode is active, avoiding dashboard-secret removal or
+  configuration conflicts during a mock release. Reduced the default
+  in-application prompt budget from $250 to the approved $3 pilot allowance.
 
 ## Validation evidence
 
-- Full Vitest: 49 files / 303 tests passed.
+- Full Vitest: 49 files / 304 tests passed.
 - Root and mobile TypeScript passed.
 - Oxlint with warnings denied, scoped Prettier, and `git diff --check` passed.
 - Next.js 16.4.3 production build passed.
@@ -93,10 +104,13 @@ the public home, health, and prompt contracts.
   types, 303 tests, production web build, Android build, bundled-secret scan,
   SHA generation, and artifact upload. Cloudflare deploy skipped by design
   because the enable variable and secrets are not configured.
-- Final hosted run `40554862337` passed at commit `4aa8901`. Its 30-day artifact
-  `read-and-reflect-android-4aa890168942c7a91d109b130dab626e50bd79a5`
-  contains a 4,680,030-byte debug APK and SHA file; the downloaded APK hash
-  matched the recorded value exactly.
+- Hosted Release Automation run `40568368750` passed at commit `18e5f69`:
+  formatting, lint, types, 304 tests, production web build, Android build,
+  bundled-secret scan, SHA generation, and renamed artifact upload passed. The
+  Cloudflare job skipped because its GitHub enable variable and secrets remain
+  unset. A process-startup test exposed by the preceding run now has a narrow
+  15-second ceiling and passed five consecutive local runs before the hosted
+  rerun passed.
 - `Quality` now runs for pull requests and manual dispatch only. Direct `main`
   pushes use the stricter Release Automation gate, avoiding a redundant second
   full test/build run and conflicting status signal.
@@ -118,8 +132,16 @@ the public home, health, and prompt contracts.
 
 ## Open issues and blockers
 
-- The latest theme has not yet been deployed to the public Worker or installed
-  on the physical phone. A local refreshed debug APK has been packaged.
+- The current public `evoke-ink-app` Worker still serves the pre-rename build.
+  `/` and `/api/health` return 200, but `/api/prompts` returns 403 because the
+  deployed allowlist contains the retired origin. The corrected build is on
+  `main` but intentionally was not deployed.
+- A local deployment preflight revealed that the staged `OPENAI_API_KEY` and
+  `AI_QUOTA_HASH_SECRET` were exposed by Cloudflare's remote configuration
+  comparison as plaintext values. No upload occurred. Both values must be
+  rotated and re-added with type **Secret** before any deployment or OpenAI
+  activation. Never rerun remote configuration comparison against the current
+  values.
 - GitHub currently has no Cloudflare release secrets or enable variable. Web
   auto-deployment will remain skipped until the owner creates a scoped
   Cloudflare API token and configures the documented three repository values.
@@ -132,7 +154,9 @@ the public home, health, and prompt contracts.
 
 ## Immediate next action
 
-Configure the two Cloudflare repository secrets and the documented enable
-variable once. Subsequent green `main` commits will deploy and probe without
-manual commands. Store signing/submission and physical-device acceptance remain
-intentional human gates.
+Immediately revoke the exposed OpenAI key, create a replacement restricted key,
+generate a new stable quota secret, and store both on `evoke-ink-app` with
+Cloudflare type **Secret**. Then configure the two GitHub Cloudflare deployment
+secrets and `ENABLE_PRODUCTION_DEPLOY=true`; rerun Release Automation and verify
+the public mock probe. Keep OpenAI activation disabled until that web-only
+review completes.
