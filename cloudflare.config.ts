@@ -6,6 +6,10 @@ import {
 } from "cf/config";
 
 const workerName = "evoke-ink-app";
+const promptControlWorkerName = environmentText(
+  "PROMPT_CONTROL_WORKER_NAME",
+  "read-and-reflect",
+);
 
 function environmentText(name: string, fallback: string): string {
   const value = process.env[name]?.trim();
@@ -144,9 +148,9 @@ export default defineConfig({
       ),
       PROMPT_CONTROL_STORE: bindings.text("cloudflare"),
       PROMPT_CONTROLS: bindings.durableObject({
-        // The dashboard rename preserved the existing self-binding and its
-        // namespace. Omitting `worker` matches that remote binding; setting an
-        // explicit script name would attempt to change its ownership.
+        // Preserve the original Durable Object namespace after the public
+        // Worker rename so quota and provider-budget state cannot reset.
+        worker: promptControlWorkerName,
         exportName: "PromptControlDurableObject",
       }),
     },
