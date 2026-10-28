@@ -50,7 +50,8 @@ export function createNativeResponsePhotoCapture(
       throw new Error("The device camera did not return a usable photo");
     }
 
-    let capturedFile: File;
+    let capturedFile: File | undefined;
+    let captureFailure: unknown;
     try {
       if (result.type !== MediaType.Photo || !result.webPath) {
         throw new Error("The device camera did not return a usable photo");
@@ -67,15 +68,25 @@ export function createNativeResponsePhotoCapture(
       capturedFile = new File([blob], "captured-response.jpg", {
         type: blob.type || "image/jpeg",
       });
-    } finally {
-      try {
-        await fileCleaner.deleteFile({ path: result.uri });
-      } catch (cause) {
-        throw new Error("The temporary response photo could not be removed", {
-          cause,
-        });
-      }
+    } catch (cause) {
+      captureFailure = cause;
     }
+
+    let cleanupFailure: unknown;
+    try {
+      await fileCleaner.deleteFile({ path: result.uri });
+    } catch (cause) {
+      cleanupFailure = cause;
+    }
+
+    if (cleanupFailure) {
+      throw new Error("The temporary response photo could not be removed", {
+        cause: cleanupFailure,
+      });
+    }
+    if (captureFailure) throw captureFailure;
+    if (!capturedFile)
+      throw new Error("The device camera did not return a usable photo");
 
     return capturedFile;
   };
