@@ -16,7 +16,7 @@ describe("Android edge-to-edge host", () => {
         "main",
         "java",
         "app",
-        "readreflect",
+        "evokeink",
         "mobile",
         "MainActivity.java",
       ),

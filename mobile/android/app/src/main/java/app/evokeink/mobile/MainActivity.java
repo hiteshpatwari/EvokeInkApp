@@ -1,4 +1,4 @@
-package app.readreflect.mobile;
+package app.evokeink.mobile;
 
 import android.os.Bundle;
 import androidx.activity.EdgeToEdge;

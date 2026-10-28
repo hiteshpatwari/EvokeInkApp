@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "app.readreflect.mobile"
+    namespace = "app.evokeink.mobile"
     compileSdk = rootProject.ext.compileSdkVersion
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
     defaultConfig {
-        applicationId "app.readreflect.mobile"
+        applicationId "app.evokeink.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

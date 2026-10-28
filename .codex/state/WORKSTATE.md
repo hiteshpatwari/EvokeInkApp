@@ -10,11 +10,10 @@ minimal owner action.
 
 The product and repository are now named **Evoke Ink** / `EvokeInkApp`; the
 Cloudflare Worker is `evoke-ink-app`. Release automation is enabled on `main`
-and has passed its complete hosted web path. Android publication now requires
-an owner-controlled upload keystore and produces signed, non-debuggable,
-minified APK and AAB artifacts; debug APKs remain local QA only. The signed
-path has passed locally with a disposable test keystore, secret scans, SHA-256
-generation, and APK signature verification. Web release automation still covers
+and has passed its complete hosted web and signed Android paths. The owner's
+upload-keystore secrets and `ENABLE_ANDROID_RELEASE=true` are configured; direct
+`main` releases now produce signed, non-debuggable, minified APK and AAB
+artifacts. Debug APKs remain local QA only. Web release automation still covers
 Cloudflare deployment, and public home/health/prompt probes. Web prompt
 generation now uses OpenAI with a $2.70 in-app ceiling and a 45-second bounded
 timeout, no implicit retries, a five-request hourly IP limit, and a 40-request
@@ -23,6 +22,10 @@ are approved web origins; the custom domain is canonical for release probes and
 Android API packaging. Native origins remain excluded. The required GitHub Cloudflare secrets
 and enable variable are configured. The public Worker serves Evoke Ink branding
 and the old `read-and-reflect` Worker URL returns 404.
+
+The Android and Capacitor application ID is now `app.evokeink.mobile`, selected
+before the first Google Play upload. The legacy `read-reflect:*` persistence keys
+and backup format marker remain unchanged as internal data-format identifiers.
 
 `next-env.d.ts` is now generated and ignored as Next.js recommends. A tracked
 `vinext-env.d.ts` owns the vinext augmentation, and `typecheck` explicitly runs
@@ -218,15 +221,53 @@ and the old `read-and-reflect` Worker URL returns 404.
   types, lint, formatting, diff check, Next and vinext builds, Cloudflare deploy
   dry-run, dependency audit, local QA APK scan, signed release build/scan, and
   live vinext nonce-header inspection.
+- Commit `b6f6568324ce5ef6f4558d4bfc14c11912241d26` was pushed to `main`, and
+  Release Automation run `40601897956` passed its complete hosted path: release
+  verification, Cloudflare production deployment, live web/OpenAI probe, signed
+  Android APK/AAB build, bundled-secret scan, hashes, and artifact upload.
+- The uploaded artifact
+  `evoke-ink-android-b6f6568324ce5ef6f4558d4bfc14c11912241d26` was downloaded
+  independently. Its APK and AAB SHA-256 files both matched their binaries. The
+  public custom domain returned HTTP 200 with Evoke Ink branding and the
+  expected per-request nonce CSP. Local `HEAD` and `origin/main` matched exactly,
+  and the worktree was clean after the push.
+- Manually dispatched Release Automation run `40733293364` against the same
+  verified `main` commit on 2026-10-28. Release verification, Cloudflare deploy
+  and live probe, signed Android APK/AAB build, bundled-secret scan, and artifact
+  upload all passed. The newly uploaded artifact was downloaded; both recorded
+  SHA-256 hashes matched, and `apksigner` verified one RSA-4096 signer with APK
+  Signature Scheme v2.
+- Removed the incompatible debug-signed installation from the authorized Galaxy
+  S24 Ultra (`SM-S928U1`) with owner approval, then installed and launched the
+  verified signed APK from run `40733293364`. That artifact used the superseded
+  pre-Play package identity and is retained only as historical validation.
+- Migrated the Android/Capacitor identity to `app.evokeink.mobile`, including the
+  Gradle namespace/application ID, Java package path, Android resources,
+  Capacitor configuration, release installer, regression test, Play runbook,
+  and durable project memory. The locally assembled APK reports package
+  `app.evokeink.mobile`, label `Evoke Ink`, launcher
+  `app.evokeink.mobile.MainActivity`, version `1.0`/code `1`, and SDK 36.
+  Mobile tests passed 59/59; the mobile production build, Capacitor sync, Gradle
+  QA package, bundled-secret scan, full 51-file/314-test suite, formatting,
+  lint, root/mobile types, Next production build, dependency audit, and diff
+  check passed.
+- Added `docs/GOOGLE_PLAY_RELEASE_RUNBOOK.md`, an operator-ready path from the
+  verified GitHub AAB through Play App Signing, store setup, privacy/Data safety
+  and target-audience declarations, internal and closed testing, physical-device
+  certification, production review, staged rollout, monitoring, and rollback.
+  It uses repository facts from `docs/security/STORE_PRIVACY_INPUTS.md`, clearly
+  leaves legal/publisher declarations to their owners, and is linked from
+  `docs/RELEASE_AUTOMATION.md`.
 
 ## Open issues and blockers
 
 - OpenAI is enabled only for the production web origin. Android/native origins
   intentionally receive no live provider access until verified device
   attestation exists.
-- Production Android publication remains disabled until the owner creates and
-  stores the four upload-signing secrets and sets `ENABLE_ANDROID_RELEASE=true`.
-  Play account ownership, listing approval, and submission remain owner work.
+- Google Play account ownership, listing preparation, internal-track upload,
+  review, and submission remain owner work. The signed AAB is ready for that
+  process; workflow artifact retention is not permanent storage for the upload
+  keystore or release binaries.
 - Physical-device checks for enlarged system text and safe-area behavior remain
   release acceptance work; browser/native emulation passed.
 - Existing transcription provider/privacy gates, native attestation requirement,
@@ -234,8 +275,9 @@ and the old `read-and-reflect` Worker URL returns 404.
 
 ## Immediate next action
 
-Create and escrow the Android upload keystore, add the four production
-environment secrets documented in `docs/RELEASE_AUTOMATION.md`, and enable
-`ENABLE_ANDROID_RELEASE` when ready. Continue monitoring the OpenAI $3 hard
-limit; do not enable native or handwriting-provider traffic until its separate
-release gates are satisfied.
+Escrow the Android upload keystore securely, retain the verified signed release
+artifact, then follow `docs/GOOGLE_PLAY_RELEASE_RUNBOOK.md` to create the Play
+app and start internal testing. The privacy-policy URL and publisher decisions
+are explicit pre-upload blockers. Continue monitoring the OpenAI $3 hard limit;
+do not enable native or handwriting-provider traffic until its separate release
+gates are satisfied.

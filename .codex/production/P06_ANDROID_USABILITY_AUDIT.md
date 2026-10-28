@@ -15,7 +15,7 @@ The original release blockers were:
    landscape.
 
 The audit was performed on October 20, 2026, with
-`app.readreflect.mobile` version 1.0 on the `Pixel_10_Pro_XL` emulator
+the pre-rename package, version 1.0, on the `Pixel_10_Pro_XL` emulator
 (`emulator-5554`), Android API 37. The application targets API 36.
 
 ## Observed working functionality

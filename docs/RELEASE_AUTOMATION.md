@@ -272,3 +272,7 @@ signing key. iOS still needs an owner-controlled Apple membership, macOS/Xcode,
 signing, and TestFlight or App Store submission. Physical-device checks for
 camera/gallery behavior, PDF sharing, enlarged text, and safe areas remain human
 release acceptance.
+
+Follow `docs/GOOGLE_PLAY_RELEASE_RUNBOOK.md` for the complete Google Play app
+creation, policy declaration, internal/closed testing, certification, production
+submission, monitoring, and rollback process.

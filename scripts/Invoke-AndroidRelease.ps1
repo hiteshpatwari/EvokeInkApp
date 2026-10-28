@@ -154,7 +154,7 @@ $locationPushed = $true
 
         & $adbPath -s $devices[0] install -r $apkPath
         if ($LASTEXITCODE -ne 0) { throw 'ADB could not install the APK.' }
-        & $adbPath -s $devices[0] shell monkey -p app.readreflect.mobile -c android.intent.category.LAUNCHER 1 | Out-Null
+        & $adbPath -s $devices[0] shell monkey -p app.evokeink.mobile -c android.intent.category.LAUNCHER 1 | Out-Null
         if ($LASTEXITCODE -ne 0) { throw 'The APK installed, but Android could not launch it.' }
         $installedDevice = $devices[0]
     }
