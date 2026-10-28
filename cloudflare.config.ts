@@ -53,6 +53,11 @@ export default defineConfig({
     entrypoint: "./worker/index.ts",
     compatibilityDate: "2026-10-19",
     compatibilityFlags: ["nodejs_compat"],
+    // Preserve the two public Cloudflare endpoints that already serve this
+    // Worker. Strict deploys reject an implicit workers.dev or preview-URL
+    // change even when the custom domain itself is represented below.
+    workersDev: true,
+    previewUrls: true,
     assets: {
       htmlHandling: "none",
       notFoundHandling: "none",
