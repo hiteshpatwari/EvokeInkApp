@@ -99,13 +99,19 @@ Deliver response coaching in dependency order, proving ephemeral typed determini
   - **Implemented transcription slice**: Provider-neutral strict transcription contract, server-only OpenAI image adapter with `store: false`, explicit `Read handwriting` upload, confirm/edit/retake UX, truthful mock unavailability, independent quota/budget controls, content-free events, transient cleanup, and web/native fail-closed configuration.
   - **Still required for task completion**: Integrated adversarial verification, real feedback-provider adapter, owner and provider-retention approval, controlled web acceptance, and the external release evidence listed below. No live child content has been processed.
 
-- [ ] **P3-T2: Implement native attestation enforcement while activation remains disabled**
+- [x] **P3-T2: Implement native attestation enforcement while activation remains disabled**
   - **Source**: Design `Security Boundary`; current mobile architecture constraint
   - **Scope**: Verified Play Integrity/App Attest or equivalent authorization and mobile transport integration
   - **Depends on**: P3-T1
   - **Verification**: Test doubles and controlled acceptance show valid claims pass while replayed, missing, invalid, and origin-only claims fail closed
   - **Primary failure**: A copied native origin can spend the shared provider key.
   - **Observable check**: Requests without valid server-verified attestation cannot invoke the real provider.
+  - **Implemented**: Android standard Play Integrity tokens bind to the exact
+    prepared JPEG digest. The Worker decodes the token with Google and requires
+    the Evoke Ink package, approved Play signing certificate, fresh matching
+    request hash, Play-recognized and licensed app, and device-integrity verdict
+    before quota reservation or provider execution. Activation remains
+    operator-gated.
 
 #### Phase Completion
 

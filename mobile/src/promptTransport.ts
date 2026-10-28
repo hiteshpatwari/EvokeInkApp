@@ -10,6 +10,7 @@ import {
 } from "../../src/domain/schemas";
 import { handwritingTranscriptionResultSchema } from "../../src/domain/handwritingTranscription";
 import { z } from "zod";
+import type { NativeImageAttestation } from "./playIntegrityAttestation";
 
 const GENERAL_FALLBACK_NOTICE = "Offline mode used reliable general prompts.";
 const NOTES_FALLBACK_NOTICE =
@@ -99,10 +100,63 @@ function transcriptionUnavailableResponse() {
   );
 }
 
+async function attestedTranscriptionInit(
+  init: RequestInit | undefined,
+  attestation: NativeImageAttestation,
+  signal: AbortSignal,
+): Promise<RequestInit> {
+  if (!(init?.body instanceof FormData)) {
+    throw new Error("A prepared transcription image is required");
+  }
+  const image = init.body.get("image");
+  if (!image || typeof image === "string") {
+    throw new Error("A prepared transcription image is required");
+  }
+  const bytes =
+    typeof image.arrayBuffer === "function"
+      ? new Uint8Array(await image.arrayBuffer())
+      : await new Promise<Uint8Array>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () =>
+            reader.result instanceof ArrayBuffer
+              ? resolve(new Uint8Array(reader.result))
+              : reject(new Error("The prepared image could not be read"));
+          reader.onerror = () =>
+            reject(
+              reader.error ?? new Error("The prepared image could not be read"),
+            );
+          reader.readAsArrayBuffer(image);
+        });
+  const installationToken = new Headers(init.headers).get(
+    "X-Installation-Token",
+  );
+  if (!installationToken) {
+    throw new Error("An installation identity is required");
+  }
+  const integrityToken = await Promise.race([
+    attestation.tokenForImage(bytes, installationToken),
+    new Promise<never>((_resolve, reject) => {
+      if (signal.aborted) {
+        reject(new Error("Play Integrity timed out"));
+        return;
+      }
+      signal.addEventListener(
+        "abort",
+        () => reject(new Error("Play Integrity timed out")),
+        { once: true },
+      );
+    }),
+  ]);
+  const headers = new Headers(init.headers);
+  headers.set("X-Play-Integrity-Token", integrityToken);
+  return { ...init, headers };
+}
+
 export function createMobilePromptFetch(
   realFetch: FetchImplementation,
   configuredApi: string | undefined,
   timeoutMs = 8_000,
+  attestation?: NativeImageAttestation,
 ): FetchImplementation {
   return async (input, init) => {
     const url =
@@ -126,6 +180,9 @@ export function createMobilePromptFetch(
         : configuredApi;
 
     if (hostedApi) {
+      if (isTranscriptionRequest && !attestation) {
+        return transcriptionUnavailableResponse();
+      }
       const timeoutController = new AbortController();
       const abortFromCaller = () =>
         timeoutController.abort(init?.signal?.reason);
@@ -135,8 +192,15 @@ export function createMobilePromptFetch(
         timeoutMs,
       );
       try {
+        const hostedInit = isTranscriptionRequest
+          ? await attestedTranscriptionInit(
+              init,
+              attestation!,
+              timeoutController.signal,
+            )
+          : init;
         const response = await realFetch(hostedApi, {
-          ...init,
+          ...hostedInit,
           signal: timeoutController.signal,
         });
         if (!response.ok) throw new Error("Hosted API was unavailable");

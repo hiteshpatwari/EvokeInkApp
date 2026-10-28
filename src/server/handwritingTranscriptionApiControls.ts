@@ -5,11 +5,14 @@ import {
   generateHandwritingTranscription,
   type HandwritingTranscriptionOptions,
 } from "./generateHandwritingTranscription";
+import type { PlayIntegrityVerifier } from "./playIntegrityVerifier";
+import { handwritingAttestationRequestHash } from "@/domain/playIntegrityBinding";
 
 const installationTokenSchema = z.uuid();
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 const MONTH_MS = 30 * 24 * 60 * 60 * 1000;
-const CORS_HEADERS = "Content-Type, X-Installation-Token";
+const CORS_HEADERS =
+  "Content-Type, X-Installation-Token, X-Play-Integrity-Token";
 type Reservation =
   | "allowed"
   | "installation_quota"
@@ -26,16 +29,18 @@ export interface HandwritingTranscriptionApiConfig {
   estimatedRequestCostMicros: number;
   quotaHashSecret: string;
   providerName: "mock" | "openai";
+  nativeAttestationEnabled: boolean;
 }
 
 export interface HandwritingTranscriptionControlStore {
   reserve(request: {
-    category: "handwriting_transcription_v1";
+    category: "handwriting_transcription_v1" | "handwriting_attestation_v1";
     installationKey: string;
     ipKey: string;
     now: Date;
     installationLimit: number;
     ipLimit: number;
+    ipHourlyLimit?: number;
     budgetMicros: number;
     estimatedCostMicros: number;
     useProviderBudget: boolean;
@@ -57,6 +62,7 @@ interface Dependencies {
   controls: HandwritingTranscriptionControlStore;
   config: HandwritingTranscriptionApiConfig;
   generationOptions?: HandwritingTranscriptionOptions;
+  playIntegrityVerifier?: PlayIntegrityVerifier;
   events?: HandwritingTranscriptionEventSink;
   now?: () => Date;
 }
@@ -69,6 +75,7 @@ interface Counter {
 export class InMemoryHandwritingTranscriptionControlStore implements HandwritingTranscriptionControlStore {
   private readonly installations = new Map<string, Counter>();
   private readonly ips = new Map<string, Counter>();
+  private readonly ipHours = new Map<string, Counter>();
   private budget: Counter = { count: 0, startedAt: 0 };
 
   reserve(
@@ -81,9 +88,15 @@ export class InMemoryHandwritingTranscriptionControlStore implements Handwriting
       now,
     );
     const ip = this.current(this.ips, input.ipKey, now);
+    const ipHour = this.current(this.ipHours, input.ipKey, now, 60 * 60 * 1000);
     if (installation.count >= input.installationLimit)
       return "installation_quota" as const;
     if (ip.count >= input.ipLimit) return "ip_quota" as const;
+    if (
+      input.ipHourlyLimit !== undefined &&
+      ipHour.count >= input.ipHourlyLimit
+    )
+      return "ip_quota" as const;
     if (now - this.budget.startedAt >= MONTH_MS)
       this.budget = { count: 0, startedAt: now };
     if (
@@ -93,13 +106,19 @@ export class InMemoryHandwritingTranscriptionControlStore implements Handwriting
       return "budget_open" as const;
     installation.count += 1;
     ip.count += 1;
+    ipHour.count += 1;
     if (input.useProviderBudget) this.budget.count += input.estimatedCostMicros;
     return "allowed" as const;
   }
 
-  private current(map: Map<string, Counter>, key: string, now: number) {
+  private current(
+    map: Map<string, Counter>,
+    key: string,
+    now: number,
+    windowMs = MONTH_MS,
+  ) {
     const value = map.get(key);
-    if (value && now - value.startedAt < MONTH_MS) return value;
+    if (value && now - value.startedAt < windowMs) return value;
     const next = { count: 0, startedAt: now };
     map.set(key, next);
     return next;
@@ -357,7 +376,11 @@ export function createHandwritingTranscriptionOptionsHandler(
       request.headers.get("access-control-request-method")?.toUpperCase() ===
         "POST" &&
       requestedHeaders.every((header) =>
-        ["content-type", "x-installation-token"].includes(header),
+        [
+          "content-type",
+          "x-installation-token",
+          "x-play-integrity-token",
+        ].includes(header),
       );
     if (!allowed)
       return withHeaders(
@@ -432,6 +455,67 @@ export function createHandwritingTranscriptionPostHandler(
         dependencies.config.maxBodyBytes,
         dependencies.config.maxImageBytes,
       );
+      if (isNativeOrigin(origin)) {
+        const integrityToken = request.headers.get("x-play-integrity-token");
+        if (
+          !dependencies.config.nativeAttestationEnabled ||
+          !dependencies.playIntegrityVerifier ||
+          !integrityToken
+        ) {
+          record(403, "attestation", "openai");
+          return finish(
+            jsonError(
+              "Automatic handwriting reading is unavailable for this app installation.",
+              403,
+              "transcription_unavailable",
+            ),
+          );
+        }
+        try {
+          const [attestationInstallationKey, attestationIpKey] =
+            await Promise.all([
+              quotaKey(
+                `attestation:${token!}`,
+                dependencies.config.quotaHashSecret,
+              ),
+              quotaKey(
+                `attestation:${requestIp(request)}`,
+                dependencies.config.quotaHashSecret,
+              ),
+            ]);
+          const attempt = await dependencies.controls.reserve({
+            category: "handwriting_attestation_v1",
+            installationKey: attestationInstallationKey,
+            ipKey: attestationIpKey,
+            now: (dependencies.now ?? (() => new Date()))(),
+            installationLimit: 60,
+            ipLimit: 60,
+            ipHourlyLimit: 10,
+            budgetMicros: dependencies.config.monthlyBudgetMicros,
+            estimatedCostMicros: dependencies.config.estimatedRequestCostMicros,
+            useProviderBudget: false,
+          });
+          if (attempt !== "allowed") throw new Error("Attestation limited");
+          const requestHash = await handwritingAttestationRequestHash(
+            image,
+            token!,
+          );
+          await dependencies.playIntegrityVerifier.verify({
+            integrityToken,
+            requestHash,
+            now: (dependencies.now ?? (() => new Date()))(),
+          });
+        } catch {
+          record(403, "attestation", "openai");
+          return finish(
+            jsonError(
+              "Automatic handwriting reading is unavailable for this app installation.",
+              403,
+              "transcription_unavailable",
+            ),
+          );
+        }
+      }
       const [installationKey, ipKey] = await Promise.all([
         quotaKey(
           `transcription:${token!}`,
@@ -527,13 +611,17 @@ export function handwritingTranscriptionApiConfigFromEnvironment(): HandwritingT
       "HANDWRITING_TRANSCRIPTION_PROVIDER must be mock or openai.",
     );
   const allowedOrigins = (
-    process.env["APP_ALLOWED_ORIGINS"] ?? "http://localhost:3000"
+    process.env["HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS"] ??
+    process.env["APP_ALLOWED_ORIGINS"] ??
+    "http://localhost:3000"
   )
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
   const quotaHashSecret =
     process.env["HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET"]?.trim() ?? "";
+  const nativeAttestationEnabled =
+    process.env["PLAY_INTEGRITY_ENABLED"] === "true";
   if (providerName === "openai") {
     if (process.env["HANDWRITING_TRANSCRIPTION_LIVE_APPROVED"] !== "true")
       throw new Error(
@@ -547,7 +635,7 @@ export function handwritingTranscriptionApiConfigFromEnvironment(): HandwritingT
       throw new Error(
         "A stable handwriting transcription quota secret is required.",
       );
-    if (allowedOrigins.some(isNativeOrigin))
+    if (allowedOrigins.some(isNativeOrigin) && !nativeAttestationEnabled)
       throw new Error(
         "Native handwriting transcription requires verified device attestation.",
       );
@@ -564,16 +652,16 @@ export function handwritingTranscriptionApiConfigFromEnvironment(): HandwritingT
       20,
     ),
     ipLimit: positiveInteger("HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT", 20),
-    monthlyBudgetMicros: usdMicros(
-      "HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD",
-      50,
-    ),
+    // All paid AI features share one Durable Object budget counter. This must
+    // remain below the provider hard limit and cannot be raised per feature.
+    monthlyBudgetMicros: usdMicros("AI_MONTHLY_BUDGET_USD", 3),
     estimatedRequestCostMicros: usdMicros(
       "HANDWRITING_TRANSCRIPTION_ESTIMATED_REQUEST_COST_USD",
       0.03,
     ),
     quotaHashSecret: quotaHashSecret || "mock-only-transcription-no-budget",
     providerName,
+    nativeAttestationEnabled,
   };
 }
 

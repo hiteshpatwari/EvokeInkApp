@@ -2,80 +2,108 @@
 
 ## Objective
 
-Ship a production-ready Evoke Ink web and Android application, including a
-camera-first handwritten-response workflow that survives Android process death
-while the system camera is open.
+Finish the Android-native handwriting-transcription production gate without
+exposing the OpenAI key, accepting forged native origins, exceeding the approved
+AI budget, or weakening the existing transient-image privacy boundary.
 
 ## Current status
 
-`main` is pushed at commit `0583a82` (`Use recoverable Android camera result
-flow`). The Galaxy S24 Ultra is connected over wireless ADB as `SM_S928U1`.
-Release Automation run `40753859839` is green on attempt 2. Verification, the
-signed Android build, Cloudflare deployment, and deployed OpenAI prompt-contract
-probe all passed. Attempt 1's prompt probe had returned the transient
-`prompt_contract_failed`; rerunning only the failed hosted job passed without a
-code change.
+The implementation is complete in the working tree but is not committed or
+deployed. `main` remains at `a558946`. Live handwriting transcription remains
+disabled by default. The production Worker configuration now contains the
+server-only Play Integrity credentials and handwriting quota-hash secret, but
+the feature flags remain disabled and no real child image is processed.
 
-The signed APK from run `40753859839` was installed in place on the S24. Android
-reported `Success`, so the existing local profiles and saved worksheet were
-preserved. The installed package is `app.evokeink.mobile`, version 1.0 / code 1,
-updated at 2026-10-28 12:30:34 local device time.
+Android now uses Google Play Integrity standard requests for the explicit
+**Read handwriting** action. A local Capacitor plugin wraps Play Integrity 1.6.0,
+warms the standard token provider at app startup, and requests one token per
+transcription action. The request hash uses a versioned canonical payload bound
+to the fixed POST route, the validated installation UUID, and the SHA-256 digest
+of the exact prepared JPEG. Attestation is time-bounded; failure or timeout
+returns the existing manual-entry fallback without uploading the image. An
+expired or failed native token provider is discarded so a later action can
+prepare a fresh provider.
 
-## Camera recovery result
+The Worker decodes the encrypted token through Google's Play Integrity API
+using a server-only service-account credential. Before any paid quota
+reservation or OpenAI call it requires the Evoke Ink package, the exact request
+hash, a token no more than two minutes old, `PLAY_RECOGNIZED`, an allowlisted
+Play App Signing certificate, `LICENSED`, and `MEETS_DEVICE_INTEGRITY`.
+Untrusted verdicts fail closed with generic UI-safe copy. Google standard
+requests supply replay protection. Invalid-token traffic is also limited
+atomically to ten Google decode attempts per coarse IP per hour; this attempt
+limiter does not consume the paid OpenAI budget.
 
-The first recovery implementation correctly buffered and consumed
-`appRestoredResult`, but physical testing exposed a Capacitor 8 boundary:
-Camera `takePhoto` uses an Activity Result launcher whose in-memory
-`currentCall` is lost when Android kills the process. It does not populate
-Capacitor Bridge's persisted last-activity call, so no restored result reached
-the app.
+Prompt generation, feedback, and handwriting transcription now use one named
+SQLite-backed Durable Object (`provider-ai-v2`) for the provider-budget counter.
+Feature-prefixed installation/IP quota hashes remain separate. The
+transcription path uses the same `AI_MONTHLY_BUDGET_USD` ceiling as prompt
+generation, so one feature cannot authorize spend above the shared application
+budget. Production remains configured at $2.70 below the $3 provider hard
+limit.
 
-The response-photo path now uses Camera `getPhoto` with an explicit camera
-source and URI result. Although deprecated in favor of the newer media API, its
-Android implementation uses Capacitor's plugin activity-result contract, which
-persists and restores the call across process recreation. The adapter normalizes
-the returned legacy `Photo` to the existing internal media shape and remains
-compatible with a pending `takePhoto` restoration from an older installed
-build. Cancellation, in-memory import, plugin-temp deletion, bounded cleanup
-retry state, and one-time restored-photo consumption remain intact.
+## Changed areas
 
-Physical acceptance passed on the S24 using the actual failure sequence:
-
-1. Opened a saved worksheet and selected **Review a response**.
-2. Selected **Photograph handwritten answer** and **Open camera**.
-3. Confirmed Samsung Camera was foreground, then ran
-   `adb shell am kill app.evokeink.mobile`; the Evoke Ink PID disappeared while
-   Camera remained active.
-4. Captured a photo and accepted Samsung's preview.
-5. Android recreated Evoke Ink at the exact response review. The UI displayed
-   `Photo restored after Android reopened Evoke Ink.`
-6. Local preparation completed and exposed **Rotate right**, **Trim edges**,
-   **Choose another photo**, **Discard photo**, and **Read handwriting**.
-
-This proves both destination recovery and usable recovered-photo preparation on
-the physical target device.
+- Android/Capacitor: Play Integrity dependency, build project number, native
+  plugin, startup warmup, request-bound mobile transport, timeout/recovery tests.
+- Worker/server: Google service-account OAuth, token decoding and strict verdict
+  validation, native attestation enforcement, pre-verification abuse limit,
+  shared provider-budget object, and focused tests.
+- Release automation: Android Cloud project-number variable and disabled-by-
+  default Worker activation variables.
+- Documentation: activation runbook, security baseline, and P3-T2 completion.
 
 ## Validation completed
 
-- Focused camera regression: 9/9 tests passed, including both cancellation
-  signals and restored `getPhoto` handling.
-- Full Vitest: 53 files / 327 tests passed.
+- Focused security/transport suite: 5 files, 58 tests passed.
+- Full Vitest suite: 55 files, 343 tests passed.
+- `pnpm typecheck` passed for Next.js and mobile.
 - `pnpm lint` passed with warnings denied.
-- `pnpm typecheck` passed for Next.js and the mobile client.
-- `git diff --check` passed.
-- Mobile Vite production build passed against
-  `https://evokeink.hiteshpatwari.com/api/prompts`.
-- Capacitor Android sync and local debug Gradle build passed (248 tasks).
-- Hosted release verification passed.
-- Hosted signed Android AAB/APK build, bundle secret scan, and artifact upload
-  passed; artifact `evoke-ink-android-0583a821...` was downloaded and installed.
-- Hosted Cloudflare deployment and the live OpenAI prompt-contract probe passed
-  on run `40753859839` attempt 2.
-- Physical S24 forced-process-death camera recovery passed as described above.
+- `pnpm format:check` and `git diff --check` passed.
+- `pnpm audit --audit-level=moderate`: no known vulnerabilities.
+- `pnpm build` passed when run serially after `pnpm typecheck`.
+- `pnpm build:vinext` and Cloudflare prebuilt dry-run passed in mock mode.
+- Production mobile Vite build and Capacitor Android sync passed.
+- Android `:app:compileDebugJavaWithJavac` passed, 109 tasks.
+- Final security re-review passed with no remaining must-fix code findings.
 
-## Remaining product gate
+The first parallel Next/vinext build attempt produced stale generated Next route
+types. This was a build-output race caused by running both generators at the
+same time, not a source failure. The repository's normal serial CI order passed.
 
-The camera acquisition and process-recovery slice is complete. Live native
-handwriting transcription remains a separate production gate. It is
-intentionally disabled until device attestation and privacy/quota approval are
-complete; manual transcript entry remains the honest fallback.
+## External activation gates
+
+The Play Console app is linked to Google Cloud project `evoke-ink-app`
+(project number `189448515979`). Play Integrity is enabled with app licensing,
+application integrity, and device integrity verdicts. The GitHub repository
+variable `PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER` is set. A dedicated role-free
+service account exists, and the production Worker now shows these secrets with
+encrypted values:
+
+- `PLAY_INTEGRITY_SERVICE_ACCOUNT_EMAIL`
+- `PLAY_INTEGRITY_SERVICE_ACCOUNT_PRIVATE_KEY`
+- `HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET`
+
+The downloaded one-time Google JSON credential was deleted from the local
+Downloads folder after the Worker secrets were verified. The remaining
+owner-controlled activation gates are:
+
+1. Add the Play App Signing certificate SHA-256 digest to the approved Worker
+   configuration.
+2. Record approval for OpenAI under-18/Zero Data Retention posture, Cloudflare
+   body/header logging and retention, the privacy policy, and Play Data safety
+   disclosures.
+3. Upload the signed AAB to Play Internal testing, install it from Google Play
+   on the S24, and run the synthetic valid/tampered/replay acceptance matrix. A
+   sideloaded APK cannot prove `PLAY_RECOGNIZED` and `LICENSED`.
+
+Until those steps pass, keep `HANDWRITING_TRANSCRIPTION_PROVIDER=mock`,
+`HANDWRITING_TRANSCRIPTION_LIVE_APPROVED=false`, and
+`PLAY_INTEGRITY_ENABLED=false`. Manual transcript entry remains available.
+
+## Immediate next action
+
+Review and commit the implementation. Then add the Play App Signing certificate
+digest and complete the privacy approvals before uploading an internal-test AAB
+and running the Play-installed S24 acceptance matrix. Do not enable the live
+transcription flags before those gates pass.

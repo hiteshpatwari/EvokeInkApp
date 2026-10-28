@@ -51,10 +51,17 @@ const feedbackInit: RequestInit = {
   body: JSON.stringify(feedbackRequest),
 };
 
+const transcriptionBody = new FormData();
+transcriptionBody.set(
+  "image",
+  new File([new Uint8Array([1, 2, 3])], "answer.jpg", {
+    type: "image/jpeg",
+  }),
+);
 const transcriptionInit: RequestInit = {
   method: "POST",
   headers: { "X-Installation-Token": "00000000-0000-4000-8000-000000000000" },
-  body: new FormData(),
+  body: transcriptionBody,
 };
 
 async function validBatch() {
@@ -143,10 +150,21 @@ describe("createMobilePromptFetch", () => {
       provider: "openai",
       fallback: false,
     });
-    const realFetch = vi.fn(async () => hosted);
+    let sentInit: RequestInit | undefined;
+    const realFetch = vi.fn(
+      async (_input: RequestInfo | URL, requestInit?: RequestInit) => {
+        sentInit = requestInit;
+        return hosted;
+      },
+    );
+    const attestation = {
+      tokenForImage: vi.fn(async () => "play-integrity-token"),
+    };
     const mobileFetch = createMobilePromptFetch(
       realFetch,
       "https://api.example.com/api/prompts",
+      8_000,
+      attestation,
     );
 
     expect(await mobileFetch("/api/transcriptions", transcriptionInit)).toBe(
@@ -156,10 +174,72 @@ describe("createMobilePromptFetch", () => {
       "https://api.example.com/api/transcriptions",
       expect.objectContaining({
         body: transcriptionInit.body,
-        headers: transcriptionInit.headers,
+        headers: expect.any(Headers),
         signal: expect.any(AbortSignal),
       }),
     );
+    expect(attestation.tokenForImage).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      "00000000-0000-4000-8000-000000000000",
+    );
+    const hostedHeaders = sentInit?.headers as Headers;
+    expect(hostedHeaders.get("X-Play-Integrity-Token")).toBe(
+      "play-integrity-token",
+    );
+  });
+
+  it("fails closed before upload when native attestation is unavailable", async () => {
+    const realFetch = vi.fn();
+    const mobileFetch = createMobilePromptFetch(
+      realFetch,
+      "https://api.example.com/api/prompts",
+      8_000,
+      {
+        tokenForImage: vi.fn(async () => Promise.reject(new Error("no token"))),
+      },
+    );
+
+    const response = await mobileFetch(
+      "/api/transcriptions",
+      transcriptionInit,
+    );
+
+    expect(response.status).toBe(503);
+    expect(realFetch).not.toHaveBeenCalled();
+  });
+
+  it("never uploads a transcription image without an attestation provider", async () => {
+    const realFetch = vi.fn();
+    const mobileFetch = createMobilePromptFetch(
+      realFetch,
+      "https://api.example.com/api/prompts",
+    );
+
+    const response = await mobileFetch(
+      "/api/transcriptions",
+      transcriptionInit,
+    );
+
+    expect(response.status).toBe(503);
+    expect(realFetch).not.toHaveBeenCalled();
+  });
+
+  it("times out stalled native attestation without uploading the image", async () => {
+    vi.useFakeTimers();
+    const realFetch = vi.fn();
+    const mobileFetch = createMobilePromptFetch(
+      realFetch,
+      "https://api.example.com/api/prompts",
+      25,
+      { tokenForImage: vi.fn(() => new Promise<string>(() => undefined)) },
+    );
+
+    const pending = mobileFetch("/api/transcriptions", transcriptionInit);
+    await vi.advanceTimersByTimeAsync(25);
+    const response = await pending;
+
+    expect(response.status).toBe(503);
+    expect(realFetch).not.toHaveBeenCalled();
   });
 
   it.each([

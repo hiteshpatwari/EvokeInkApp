@@ -5,6 +5,7 @@ import {
   InMemoryHandwritingTranscriptionControlStore,
   type HandwritingTranscriptionApiConfig,
 } from "./handwritingTranscriptionApiControls";
+import { promptApiConfigFromEnvironment } from "./promptApiControls";
 
 const token = "11111111-1111-4111-8111-111111111111";
 function jpeg(width = 1, height = 1) {
@@ -53,6 +54,7 @@ function config(
     estimatedRequestCostMicros: 10_000,
     quotaHashSecret: "test-transcription-secret",
     providerName: "mock",
+    nativeAttestationEnabled: false,
     ...overrides,
   };
 }
@@ -179,6 +181,116 @@ describe("handwriting transcription API", () => {
     );
   });
 
+  it("verifies a native request against the exact prepared JPEG before quota or provider work", async () => {
+    const controls = { reserve: vi.fn(async () => "allowed" as const) };
+    const verify = vi.fn(async () => undefined);
+    const transcribe = vi.fn(async () => ({
+      transcript: "The student response.",
+      uncertainSegments: [],
+    }));
+    const nativeRequest = multipart();
+    nativeRequest.headers.set("Origin", "https://localhost");
+    nativeRequest.headers.set("X-Play-Integrity-Token", "integrity-token");
+    const handler = createHandwritingTranscriptionPostHandler({
+      controls,
+      config: config({
+        allowedOrigins: ["https://localhost"],
+        providerName: "openai",
+        nativeAttestationEnabled: true,
+      }),
+      playIntegrityVerifier: { verify },
+      generationOptions: { providerName: "openai", provider: { transcribe } },
+      now: () => new Date("2026-10-28T20:00:00Z"),
+    });
+
+    expect((await handler(nativeRequest)).status).toBe(200);
+    expect(verify).toHaveBeenCalledWith({
+      integrityToken: "integrity-token",
+      requestHash: "WdzBMeu4FMeKvOQwpV00X8xW4fzj4uV8VdC7i-_QPtA",
+      now: new Date("2026-10-28T20:00:00Z"),
+    });
+    expect(controls.reserve).toHaveBeenCalledTimes(2);
+    expect(controls.reserve).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ category: "handwriting_attestation_v1" }),
+    );
+    expect(controls.reserve).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ category: "handwriting_transcription_v1" }),
+    );
+    expect(transcribe).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["invalid", "bad-token"],
+  ])(
+    "rejects %s native attestation before quota and provider work",
+    async (_label, integrityToken) => {
+      const controls = { reserve: vi.fn(async () => "allowed" as const) };
+      const verify = vi.fn(async () => {
+        if (integrityToken) throw new Error("invalid");
+      });
+      const transcribe = vi.fn();
+      const nativeRequest = multipart();
+      nativeRequest.headers.set("Origin", "https://localhost");
+      if (integrityToken)
+        nativeRequest.headers.set("X-Play-Integrity-Token", integrityToken);
+      const handler = createHandwritingTranscriptionPostHandler({
+        controls,
+        config: config({
+          allowedOrigins: ["https://localhost"],
+          providerName: "openai",
+          nativeAttestationEnabled: true,
+        }),
+        playIntegrityVerifier: { verify },
+        generationOptions: { providerName: "openai", provider: { transcribe } },
+      });
+
+      const response = await handler(nativeRequest);
+      expect(response.status).toBe(403);
+      expect(controls.reserve).toHaveBeenCalledTimes(integrityToken ? 1 : 0);
+      if (integrityToken) {
+        expect(controls.reserve).toHaveBeenCalledWith(
+          expect.objectContaining({
+            category: "handwriting_attestation_v1",
+            useProviderBudget: false,
+          }),
+        );
+      }
+      expect(transcribe).not.toHaveBeenCalled();
+    },
+  );
+
+  it("limits invalid native attestation attempts before Google decoding", async () => {
+    const verify = vi.fn(async () => {
+      throw new Error("invalid");
+    });
+    const transcribe = vi.fn();
+    const handler = createHandwritingTranscriptionPostHandler({
+      controls: new InMemoryHandwritingTranscriptionControlStore(),
+      config: config({
+        allowedOrigins: ["https://localhost"],
+        providerName: "openai",
+        nativeAttestationEnabled: true,
+      }),
+      playIntegrityVerifier: { verify },
+      generationOptions: { providerName: "openai", provider: { transcribe } },
+    });
+
+    const responses = [];
+    for (let index = 0; index < 12; index += 1) {
+      const nativeRequest = multipart();
+      nativeRequest.headers.set("Origin", "https://localhost");
+      nativeRequest.headers.set("X-Play-Integrity-Token", `invalid-${index}`);
+      responses.push(await handler(nativeRequest));
+    }
+
+    expect(responses.every((response) => response.status === 403)).toBe(true);
+    expect(verify).toHaveBeenCalledTimes(10);
+    expect(transcribe).not.toHaveBeenCalled();
+  });
+
   it("rejects a malformed JPEG before quota reservation or provider work", async () => {
     const controls = { reserve: vi.fn(async () => "allowed" as const) };
     const transcribe = vi.fn(async () => ({
@@ -221,9 +333,40 @@ describe("handwriting transcription environment gates", () => {
       /quota secret/i,
     );
     vi.stubEnv("HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET", "stable-secret");
-    vi.stubEnv("APP_ALLOWED_ORIGINS", "https://localhost");
+    vi.stubEnv("APP_ALLOWED_ORIGINS", "https://evokeink.example");
+    vi.stubEnv(
+      "HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS",
+      "https://localhost",
+    );
     expect(() => handwritingTranscriptionApiConfigFromEnvironment()).toThrow(
       /attestation/i,
     );
+    vi.stubEnv("PLAY_INTEGRITY_ENABLED", "true");
+    expect(
+      handwritingTranscriptionApiConfigFromEnvironment()
+        .nativeAttestationEnabled,
+    ).toBe(true);
+  });
+
+  it("keeps the live prompt origin web-only while transcription accepts the attested native origin", () => {
+    vi.stubEnv("AI_PROVIDER", "openai");
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    vi.stubEnv("AI_QUOTA_HASH_SECRET", "stable-prompt-secret");
+    vi.stubEnv("APP_ALLOWED_ORIGINS", "https://evokeink.example");
+    vi.stubEnv("HANDWRITING_TRANSCRIPTION_PROVIDER", "openai");
+    vi.stubEnv("HANDWRITING_TRANSCRIPTION_LIVE_APPROVED", "true");
+    vi.stubEnv("HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET", "stable-secret");
+    vi.stubEnv(
+      "HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS",
+      "https://localhost",
+    );
+    vi.stubEnv("PLAY_INTEGRITY_ENABLED", "true");
+
+    expect(promptApiConfigFromEnvironment().allowedOrigins).toEqual([
+      "https://evokeink.example",
+    ]);
+    expect(
+      handwritingTranscriptionApiConfigFromEnvironment().allowedOrigins,
+    ).toEqual(["https://localhost"]);
   });
 });

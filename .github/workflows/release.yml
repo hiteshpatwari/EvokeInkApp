@@ -73,6 +73,7 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER: ${{ vars.PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER }}
     steps:
       - name: Check out verified commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -130,7 +131,13 @@ jobs:
       OPENAI_MAX_RETRIES: "0"
       AI_IP_MONTHLY_LIMIT: "40"
       AI_IP_HOURLY_LIMIT: "5"
-      APP_ALLOWED_ORIGINS: https://evokeink.hiteshpatwari.com,https://evoke-ink-app.hiteshpatwari.workers.dev
+      APP_ALLOWED_ORIGINS: ${{ vars.APP_ALLOWED_ORIGINS || 'https://evokeink.hiteshpatwari.com,https://evoke-ink-app.hiteshpatwari.workers.dev' }}
+      HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS: ${{ vars.HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS || 'https://evokeink.hiteshpatwari.com,https://evoke-ink-app.hiteshpatwari.workers.dev' }}
+      HANDWRITING_TRANSCRIPTION_PROVIDER: ${{ vars.HANDWRITING_TRANSCRIPTION_PROVIDER || 'mock' }}
+      HANDWRITING_TRANSCRIPTION_LIVE_APPROVED: ${{ vars.HANDWRITING_TRANSCRIPTION_LIVE_APPROVED || 'false' }}
+      PLAY_INTEGRITY_ENABLED: ${{ vars.PLAY_INTEGRITY_ENABLED || 'false' }}
+      PLAY_INTEGRITY_PACKAGE_NAME: app.evokeink.mobile
+      PLAY_INTEGRITY_CERTIFICATE_SHA256_DIGESTS: ${{ vars.PLAY_INTEGRITY_CERTIFICATE_SHA256_DIGESTS }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       RELEASE_SHA: ${{ github.sha }}

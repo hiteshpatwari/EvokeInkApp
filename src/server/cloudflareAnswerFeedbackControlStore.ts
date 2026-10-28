@@ -1,17 +1,14 @@
 import { env } from "cloudflare:workers";
 import type { AnswerFeedbackControlStore } from "./answerFeedbackApiControls";
-
-const GLOBAL_ANSWER_FEEDBACK_CONTROL_OBJECT = "answer-feedback-v1";
+import { GLOBAL_AI_CONTROL_OBJECT } from "./cloudflarePromptControlStore";
 
 /**
- * Uses a dedicated Durable Object instance so feedback quotas and budget never
- * share counters with prompt generation.
+ * Feature-prefixed quota hashes remain independent while every paid AI feature
+ * reserves against one atomic provider-budget counter.
  */
 export class CloudflareAnswerFeedbackControlStore implements AnswerFeedbackControlStore {
   reserve(input: Parameters<AnswerFeedbackControlStore["reserve"]>[0]) {
-    const stub = env.PROMPT_CONTROLS.getByName(
-      GLOBAL_ANSWER_FEEDBACK_CONTROL_OBJECT,
-    );
+    const stub = env.PROMPT_CONTROLS.getByName(GLOBAL_AI_CONTROL_OBJECT);
     const { category: _category, now, ...reservation } = input;
     return stub.reserve({
       ...reservation,

@@ -21,6 +21,8 @@ const transcriptionProviderName = environmentText(
   "HANDWRITING_TRANSCRIPTION_PROVIDER",
   "mock",
 ).toLowerCase();
+const playIntegrityEnabled =
+  environmentText("PLAY_INTEGRITY_ENABLED", "false") === "true";
 if (
   transcriptionProviderName !== "mock" &&
   transcriptionProviderName !== "openai"
@@ -36,11 +38,9 @@ if (
 const providerSecretBindings = {
   OPENAI_API_KEY: bindings.secret(),
   AI_QUOTA_HASH_SECRET: bindings.secret(),
-  ...(transcriptionProviderName === "openai"
-    ? {
-        HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET: bindings.secret(),
-      }
-    : {}),
+  HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET: bindings.secret(),
+  PLAY_INTEGRITY_SERVICE_ACCOUNT_EMAIL: bindings.secret(),
+  PLAY_INTEGRITY_SERVICE_ACCOUNT_PRIVATE_KEY: bindings.secret(),
 };
 
 export default defineConfig({
@@ -71,8 +71,21 @@ export default defineConfig({
       HANDWRITING_TRANSCRIPTION_LIVE_APPROVED: bindings.text(
         environmentText("HANDWRITING_TRANSCRIPTION_LIVE_APPROVED", "false"),
       ),
+      PLAY_INTEGRITY_ENABLED: bindings.text(String(playIntegrityEnabled)),
+      PLAY_INTEGRITY_PACKAGE_NAME: bindings.text(
+        environmentText("PLAY_INTEGRITY_PACKAGE_NAME", "app.evokeink.mobile"),
+      ),
+      PLAY_INTEGRITY_CERTIFICATE_SHA256_DIGESTS: bindings.text(
+        environmentText("PLAY_INTEGRITY_CERTIFICATE_SHA256_DIGESTS", ""),
+      ),
       HANDWRITING_TRANSCRIPTION_MODEL: bindings.text(
         environmentText("HANDWRITING_TRANSCRIPTION_MODEL", "gpt-5-mini"),
+      ),
+      HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS: bindings.text(
+        environmentText(
+          "HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS",
+          environmentText("APP_ALLOWED_ORIGINS", "http://localhost:3001"),
+        ),
       ),
       HANDWRITING_TRANSCRIPTION_MAX_REQUEST_BYTES: bindings.text(
         environmentText(
@@ -88,9 +101,6 @@ export default defineConfig({
       ),
       HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT: bindings.text(
         environmentText("HANDWRITING_TRANSCRIPTION_IP_MONTHLY_LIMIT", "20"),
-      ),
-      HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD: bindings.text(
-        environmentText("HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD", "50"),
       ),
       HANDWRITING_TRANSCRIPTION_ESTIMATED_REQUEST_COST_USD: bindings.text(
         environmentText(

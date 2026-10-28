@@ -9,6 +9,7 @@ import { nativeWorksheetExporter } from "./nativeWorksheetExport";
 import { createMobilePersistence } from "./nativePersistence";
 import { bootstrapMobileApplication } from "./bootstrap";
 import { nativeResponsePhotoCapture } from "./nativeResponsePhotoCapture";
+import { playIntegrityAttestation } from "./playIntegrityAttestation";
 import "../../src/app/globals.css";
 
 declare const __PROMPT_API_URL__: string;
@@ -16,6 +17,8 @@ declare const __PROMPT_API_URL__: string;
 window.fetch = createMobilePromptFetch(
   window.fetch.bind(window),
   __PROMPT_API_URL__,
+  8_000,
+  playIntegrityAttestation,
 );
 
 document.documentElement.dataset["nativeApp"] = "true";
@@ -28,6 +31,7 @@ export async function startMobileApplication() {
   await App.addListener("appRestoredResult", (event) => {
     void nativeResponsePhotoCapture.handleRestoredResult(event);
   });
+  void playIntegrityAttestation.prepare().catch(() => undefined);
   await nativeResponsePhotoCapture.retryPendingCleanup();
   await bootstrapMobileApplication(
     () => createMobilePersistence(window.localStorage),

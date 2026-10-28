@@ -82,6 +82,72 @@ Do not add the optional handwriting-transcription secrets or enable
 `HANDWRITING_TRANSCRIPTION_PROVIDER=openai` yet. Live image transcription has
 separate approval, quota, privacy, retention, and native-attestation gates.
 
+### Native handwriting transcription activation
+
+The repository now implements request-bound Google Play Integrity verification,
+but the feature remains disabled until the store and data-processing approvals
+below are complete. A sideloaded APK cannot prove the production
+`PLAY_RECOGNIZED` and `LICENSED` verdicts. Complete acceptance with an internal
+test build installed from Google Play.
+
+1. In Google Play Console, open Evoke Ink, go to **Protected with Play**, and
+   link a Google Cloud project under **Play Integrity API**. Record the numeric
+   Cloud project number. Google documents this procedure in
+   [Play Integrity setup](https://developer.android.com/google/play/integrity/setup).
+2. In that Cloud project, create a dedicated service account for the Worker and
+   grant only the permission needed to decode Play Integrity tokens. Create a
+   JSON key, copy the `client_email` and `private_key` values into a password
+   manager, and delete the downloaded key file after the Worker secrets are
+   stored.
+3. In **Play Console → Setup → App integrity**, copy the SHA-256 digest for the
+   **app signing certificate**, not the upload certificate. Convert the
+   fingerprint bytes to unpadded base64url before configuring the Worker. More
+   than one comma-separated digest may be supplied during an approved signing
+   transition.
+4. Add this GitHub repository variable:
+   - `PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER`: the numeric project number from
+     step 1. It is not a secret. Release builds inject it into the Android app.
+
+5. Add these Cloudflare Worker secrets under **Settings → Variables and
+   Secrets**:
+   - `PLAY_INTEGRITY_SERVICE_ACCOUNT_EMAIL`
+   - `PLAY_INTEGRITY_SERVICE_ACCOUNT_PRIVATE_KEY`
+   - `HANDWRITING_TRANSCRIPTION_QUOTA_HASH_SECRET`, generated independently
+     from the prompt quota secret and kept stable across deployments
+
+6. Keep the shared `AI_MONTHLY_BUDGET_USD` at `$2.70` or lower. Prompt
+   generation and handwriting transcription reserve against the same atomic
+   Worker budget, so their combined application authorization stays below the
+   `$3` OpenAI project hard limit. Do not create a larger transcription-only
+   budget.
+7. Complete and record the owner approvals in
+   `docs/security/STORE_PRIVACY_INPUTS.md`: OpenAI under-18 and Zero Data
+   Retention posture, Cloudflare body/header logging and retention, published
+   privacy policy, Google Play Data safety answers, and a controlled pilot with
+   synthetic handwriting.
+8. Only after steps 1 through 7, deploy with:
+   - `HANDWRITING_TRANSCRIPTION_PROVIDER=openai`
+   - `HANDWRITING_TRANSCRIPTION_LIVE_APPROVED=true`
+   - `PLAY_INTEGRITY_ENABLED=true`
+   - `PLAY_INTEGRITY_PACKAGE_NAME=app.evokeink.mobile`
+   - `PLAY_INTEGRITY_CERTIFICATE_SHA256_DIGESTS=<base64url digest>`
+   - `HANDWRITING_TRANSCRIPTION_ALLOWED_ORIGINS` set to the two owned web
+     origins plus native `https://localhost`
+
+   Keep `APP_ALLOWED_ORIGINS` restricted to the two owned web origins. Prompt
+   generation intentionally does not accept the native origin; transcription
+   has its own allowlist because Play Integrity protects that separate route.
+
+9. Upload the resulting AAB to Internal testing, install it from Google Play on
+   the S24, and run one synthetic answer-photo transcription. Confirm the
+   request returns `provider: openai`, `fallback: false`, the OpenAI usage
+   increase matches one request, and neither the prepared image nor transcript
+   appears in application or host logs.
+10. Repeat the same request with a missing token, reused token, altered image,
+    and sideloaded build. Each must fail before quota reservation and OpenAI.
+    If any check fails, set `HANDWRITING_TRANSCRIPTION_PROVIDER=mock` and deploy
+    the rollback immediately.
+
 ### Web-only OpenAI activation
 
 The reviewed production release uses `AI_PROVIDER=openai`, a $2.70 application

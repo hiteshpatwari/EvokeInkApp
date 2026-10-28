@@ -36,6 +36,18 @@ $locationPushed = $false
 
 try {
 if ($BuildType -eq 'Release') {
+    $playIntegrityProjectNumber = 0L
+    if (
+        [string]::IsNullOrWhiteSpace($env:PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER) -or
+        -not [long]::TryParse(
+            $env:PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER,
+            [ref]$playIntegrityProjectNumber
+        ) -or
+        $playIntegrityProjectNumber -le 0
+    ) {
+        throw 'PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER must be a positive numeric Google Cloud project number for a signed Android release.'
+    }
+
     $requiredSigningValues = @(
         'ANDROID_KEYSTORE_PASSWORD',
         'ANDROID_KEY_ALIAS',

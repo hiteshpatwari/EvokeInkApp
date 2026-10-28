@@ -22,6 +22,11 @@ let postHandlerPromise:
 
 async function createPostHandler() {
   const config = handwritingTranscriptionApiConfigFromEnvironment();
+  const playIntegrityVerifier = config.nativeAttestationEnabled
+    ? (
+        await import("@/server/playIntegrityVerifier")
+      ).playIntegrityVerifierFromEnvironment()
+    : undefined;
   const selectedControls =
     process.env["PROMPT_CONTROL_STORE"] === "cloudflare"
       ? new (
@@ -32,6 +37,7 @@ async function createPostHandler() {
     controls: selectedControls,
     config,
     generationOptions: { providerName: config.providerName },
+    ...(playIntegrityVerifier ? { playIntegrityVerifier } : {}),
     events: new ConsoleHandwritingTranscriptionEventSink(),
   });
 }
