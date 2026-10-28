@@ -8,6 +8,7 @@ import { installWorksheetExporter } from "@/pdf/worksheetExport";
 import { nativeWorksheetExporter } from "./nativeWorksheetExport";
 import { createMobilePersistence } from "./nativePersistence";
 import { bootstrapMobileApplication } from "./bootstrap";
+import { captureNativeResponsePhoto } from "./nativeResponsePhotoCapture";
 import "../../src/app/globals.css";
 
 declare const __PROMPT_API_URL__: string;
@@ -29,7 +30,10 @@ export async function startMobileApplication() {
     (storage) =>
       createRoot(root).render(
         <StrictMode>
-          <AppShell storage={storage} />
+          <AppShell
+            storage={storage}
+            captureResponsePhoto={captureNativeResponsePhoto}
+          />
         </StrictMode>,
       ),
   );

@@ -27,6 +27,7 @@ interface ResponseReviewProps {
     transcript: string;
     uncertainSegments: string[];
   }>;
+  capturePhoto?: () => Promise<File | null>;
 }
 
 const UNAVAILABLE_MESSAGE =
@@ -38,6 +39,7 @@ export function ResponseReview({
   onDone,
   processPhoto = processResponsePhoto,
   transcribePhoto,
+  capturePhoto,
 }: ResponseReviewProps) {
   const [responseText, setResponseText] = useState("");
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
@@ -134,6 +136,7 @@ export function ResponseReview({
         <ResponsePhotoPreparation
           processPhoto={processPhoto}
           {...(transcribePhoto ? { transcribePhoto } : {})}
+          {...(capturePhoto ? { capturePhoto } : {})}
           onUseTypedEntry={() => {
             setPhotoMode(false);
             window.setTimeout(() => responseRef.current?.focus(), 0);
@@ -187,7 +190,7 @@ export function ResponseReview({
               setTranscriptNotice("");
             }}
           >
-            Use a photo
+            {capturePhoto ? "Photograph handwritten answer" : "Use a photo"}
           </button>
         )}
         {transcriptNotice && (

@@ -56,6 +56,41 @@ afterEach(() => {
 });
 
 describe("response photo preparation", () => {
+  it("opens the native camera and prepares the captured photo without a download-upload step", async () => {
+    const user = userEvent.setup();
+    const captured = new File(
+      [new Uint8Array([0xff, 0xd8, 0xff, 0xd9])],
+      "captured-response.jpg",
+      { type: "image/jpeg" },
+    );
+    const capturePhoto = vi.fn(async () => captured);
+    const processPhoto = vi.fn(async () => processedPhoto());
+
+    render(
+      <ResponseReview
+        childSnapshot={profile}
+        prompt={prompt}
+        onDone={vi.fn()}
+        capturePhoto={capturePhoto}
+        processPhoto={processPhoto}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Photograph handwritten answer" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Open camera" }));
+
+    expect(capturePhoto).toHaveBeenCalledOnce();
+    expect(processPhoto).toHaveBeenCalledWith(captured, {});
+    expect(
+      await screen.findByAltText("Selected response photo"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Choose an existing response photo"),
+    ).toBeInTheDocument();
+  });
+
   it("uploads only after explicit consent, confirms extracted text, then sends text-only feedback", async () => {
     const user = userEvent.setup();
     const dispose = vi.fn();

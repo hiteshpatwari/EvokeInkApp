@@ -93,9 +93,15 @@ const emptyCreation: CreationState = {
   skills: ["evidence_and_explanation", "inference"],
 };
 
-type AppShellProps = { storage?: FlushableStorage };
+type AppShellProps = {
+  storage?: FlushableStorage;
+  captureResponsePhoto?: () => Promise<File | null>;
+};
 
-export function AppShell({ storage }: AppShellProps = {}) {
+export function AppShell({
+  storage,
+  captureResponsePhoto,
+}: AppShellProps = {}) {
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<AppScreen>("home");
   const [profiles, setProfiles] = useState<ChildProfile[]>([]);
@@ -1674,6 +1680,9 @@ export function AppShell({ storage }: AppShellProps = {}) {
         <ResponseReview
           childSnapshot={workingSession.childSnapshot}
           prompt={responseReviewPrompt}
+          {...(captureResponsePhoto
+            ? { capturePhoto: captureResponsePhoto }
+            : {})}
           onDone={() => {
             setResponseReviewPrompt(null);
             setScreen("preview");

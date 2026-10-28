@@ -1000,7 +1000,12 @@ textarea {
   padding: 12px 14px;
 }
 .response-photo__picker {
+  cursor: pointer;
   font-weight: 750;
+}
+.response-photo__camera-action,
+.response-photo__picker.secondary-button {
+  justify-self: start;
 }
 .response-photo input[type="file"] {
   background: var(--surface);

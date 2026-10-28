@@ -17,6 +17,7 @@ export interface ResponsePhotoPreparationProps {
   onUseTypedEntry: () => void;
   processPhoto?: typeof processResponsePhoto;
   transcribePhoto?: (image: Blob) => Promise<HandwritingTranscription>;
+  capturePhoto?: () => Promise<File | null>;
 }
 
 const GENERIC_PHOTO_ERROR =
@@ -27,10 +28,12 @@ export function ResponsePhotoPreparation({
   onUseTypedEntry,
   processPhoto = processResponsePhoto,
   transcribePhoto = requestHandwritingTranscription,
+  capturePhoto,
 }: ResponsePhotoPreparationProps) {
   const [photo, setPhoto] = useState<ProcessedResponsePhoto | null>(null);
   const [transcript, setTranscript] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [editingTranscript, setEditingTranscript] = useState(false);
   const [extractionAttempted, setExtractionAttempted] = useState(false);
@@ -142,6 +145,30 @@ export function ResponsePhotoPreparation({
     if (file) await prepare(file);
   };
 
+  const openCamera = async () => {
+    if (!capturePhoto || capturing || processing || extracting) return;
+    setCapturing(true);
+    setError("");
+    setStatus("Opening camera...");
+    try {
+      const file = await capturePhoto();
+      if (!mountedRef.current) return;
+      if (!file) {
+        setStatus("Camera closed. No photo was added.");
+        return;
+      }
+      await prepare(file);
+    } catch {
+      if (!mountedRef.current) return;
+      setStatus("");
+      setError(
+        "The camera could not open. Check camera access, try again, or choose an existing photo.",
+      );
+    } finally {
+      if (mountedRef.current) setCapturing(false);
+    }
+  };
+
   const transformCurrent = async (transform: ResponsePhotoTransform) => {
     const current = photoRef.current;
     if (!current || processing) return;
@@ -172,6 +199,19 @@ export function ResponsePhotoPreparation({
     setExtractionAttempted(false);
     setError("");
     setStatus("Photo discarded. Choose another photo or type the response.");
+  };
+
+  const retake = () => {
+    operationRef.current += 1;
+    if (!clearCurrentPhoto()) return;
+    setTranscript("");
+    setUncertainSegments([]);
+    setEditingTranscript(false);
+    setExtractionAttempted(false);
+    setError("");
+    setStatus("");
+    if (capturePhoto) void openCamera();
+    else fileInputRef.current?.click();
   };
 
   const useTypedEntry = () => {
@@ -270,22 +310,46 @@ export function ResponsePhotoPreparation({
         Check the extracted text before feedback so handwriting mistakes do not
         lead to unfair coaching.
       </p>
-      <label className="response-photo__picker" htmlFor="response-photo-file">
-        Choose one response photo
+      {capturePhoto && (
+        <button
+          type="button"
+          className="primary-button response-photo__camera-action"
+          disabled={capturing || processing || extracting}
+          onClick={() => void openCamera()}
+        >
+          {capturing ? "Opening camera..." : "Open camera"}
+        </button>
+      )}
+      <label
+        className={
+          capturePhoto
+            ? "secondary-button response-photo__picker"
+            : "response-photo__picker"
+        }
+        htmlFor="response-photo-file"
+      >
+        {capturePhoto
+          ? "Choose an existing response photo"
+          : "Choose one response photo"}
       </label>
       <input
         ref={fileInputRef}
         id="response-photo-file"
         type="file"
+        className={capturePhoto ? "visually-hidden" : undefined}
         accept="image/jpeg,image/png,image/webp"
         capture="environment"
-        disabled={processing || extracting}
+        disabled={capturing || processing || extracting}
         onChange={(event) => void selectPhoto(event)}
       />
       <p className="muted">JPEG, PNG, or WebP. One image, up to 8 MB.</p>
-      {(processing || extracting) && (
+      {(capturing || processing || extracting) && (
         <p className="response-status" role="status" aria-live="polite">
-          {extracting ? "Reading handwriting..." : "Preparing photo locally..."}
+          {capturing
+            ? "Opening camera..."
+            : extracting
+              ? "Reading handwriting..."
+              : "Preparing photo locally..."}
         </p>
       )}
       {error && (
@@ -293,7 +357,7 @@ export function ResponsePhotoPreparation({
           {error}
         </p>
       )}
-      {!processing && !extracting && status && (
+      {!capturing && !processing && !extracting && status && (
         <p className="response-status" role="status" aria-live="polite">
           {status}
         </p>
@@ -423,7 +487,7 @@ export function ResponsePhotoPreparation({
                 type="button"
                 className="secondary-button"
                 disabled={processing || extracting}
-                onClick={chooseAnother}
+                onClick={retake}
               >
                 Retake photo
               </button>

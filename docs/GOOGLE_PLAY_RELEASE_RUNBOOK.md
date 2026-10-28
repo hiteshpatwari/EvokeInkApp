@@ -244,8 +244,11 @@ testing is currently exempt. See [Data safety requirements](https://support.goog
 Complete every Play Console item shown under **Needs attention**, including any
 news, government, financial, health, advertising-ID, or sensitive-permission
 question. Answer from the actual submitted app. The current manifest requests
-only Internet access and uses the system file/camera picker rather than direct
-camera or broad media permissions; confirm this again after upload.
+only Internet access. The optional answer-photo flow uses the official
+Capacitor Camera plugin to open the system camera directly, does not save the
+capture to the gallery, deletes its native temporary file after importing it,
+and retains the system file picker as a fallback without broad media
+permissions. Confirm the merged release manifest again after upload.
 
 ## 7. Upload to Internal testing
 
