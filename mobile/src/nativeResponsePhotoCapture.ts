@@ -1,10 +1,12 @@
 import {
   Camera,
   CameraDirection,
-  EncodingType,
+  CameraResultType,
+  CameraSource,
   MediaType,
   type MediaResult,
-  type TakePhotoOptions,
+  type ImageOptions,
+  type Photo,
 } from "@capacitor/camera";
 import { Filesystem } from "@capacitor/filesystem";
 import { Preferences } from "@capacitor/preferences";
@@ -26,7 +28,7 @@ export interface RestoredResponsePhoto {
 }
 
 type NativeCamera = {
-  takePhoto(options: TakePhotoOptions): Promise<MediaResult>;
+  getPhoto(options: ImageOptions): Promise<Photo>;
 };
 type CapturedFileCleaner = {
   deleteFile(options: { path: string }): Promise<void>;
@@ -50,6 +52,7 @@ class CapturedPhotoImportError extends Error {
 }
 
 const CANCELLED_PHOTO_CODE = "OS-PLUG-CAMR-0006";
+const LEGACY_CANCELLED_PHOTO_MESSAGE = "User cancelled photos app";
 export const PENDING_RESPONSE_PHOTO_KEY = "evoke-ink:pending-response-photo:v1";
 
 function isCaptureContext(
@@ -66,7 +69,7 @@ function isCaptureContext(
 }
 
 async function importAndDeleteCapturedPhoto(
-  result: MediaResult,
+  result: Pick<MediaResult, "type" | "uri" | "webPath">,
   fetchImage: typeof fetch,
   fileCleaner: CapturedFileCleaner,
 ): Promise<File> {
@@ -118,6 +121,15 @@ async function importAndDeleteCapturedPhoto(
   if (!capturedFile)
     throw new Error("The device camera did not return a usable photo");
   return capturedFile;
+}
+
+function legacyPhotoResult(photo: Photo): MediaResult {
+  return {
+    saved: photo.saved,
+    type: MediaType.Photo,
+    ...(photo.path ? { uri: photo.path } : {}),
+    ...(photo.webPath ? { webPath: photo.webPath } : {}),
+  };
 }
 
 export function createNativeResponsePhotoCapture(
@@ -181,20 +193,24 @@ export function createNativeResponsePhotoCapture(
       });
       let result: MediaResult;
       try {
-        result = await camera.takePhoto({
-          cameraDirection: CameraDirection.Rear,
+        const photo = await camera.getPhoto({
+          allowEditing: false,
           correctOrientation: true,
-          editable: "no",
-          encodingType: EncodingType.JPEG,
-          includeMetadata: true,
+          direction: CameraDirection.Rear,
+          height: 2048,
           quality: 90,
+          resultType: CameraResultType.Uri,
           saveToGallery: false,
-          targetHeight: 2048,
-          targetWidth: 2048,
+          source: CameraSource.Camera,
+          width: 2048,
         });
+        result = legacyPhotoResult(photo);
       } catch (cause) {
         await clearPending();
-        if ((cause as CameraFailure)?.code === CANCELLED_PHOTO_CODE)
+        if (
+          (cause as CameraFailure)?.code === CANCELLED_PHOTO_CODE ||
+          (cause as Error)?.message === LEGACY_CANCELLED_PHOTO_MESSAGE
+        )
           return null;
         throw new Error(
           "The device camera could not capture a response photo",
@@ -247,7 +263,10 @@ export function createNativeResponsePhotoCapture(
     },
 
     async handleRestoredResult(event: RestoredListenerEvent): Promise<void> {
-      if (event.pluginId !== "Camera" || event.methodName !== "takePhoto") {
+      if (
+        event.pluginId !== "Camera" ||
+        (event.methodName !== "getPhoto" && event.methodName !== "takePhoto")
+      ) {
         return;
       }
       const context = await readPending();
@@ -255,7 +274,10 @@ export function createNativeResponsePhotoCapture(
         await clearPending();
         return;
       }
-      const mediaResult = event.data as MediaResult;
+      const mediaResult =
+        event.methodName === "getPhoto"
+          ? legacyPhotoResult(event.data as Photo)
+          : (event.data as MediaResult);
       let cleanupRecorded = false;
       try {
         cleanupRecorded = await recordCleanup(context, mediaResult.uri);

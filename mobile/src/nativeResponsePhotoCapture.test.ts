@@ -1,22 +1,12 @@
 import {
   CameraDirection,
-  EncodingType,
+  CameraResultType,
+  CameraSource,
   MediaType,
-  type MediaResult,
-  type TakePhotoOptions,
+  type ImageOptions,
 } from "@capacitor/camera";
 import { describe, expect, it, vi } from "vitest";
 import { createNativeResponsePhotoCapture } from "./nativeResponsePhotoCapture";
-
-function result(overrides: Partial<MediaResult> = {}): MediaResult {
-  return {
-    saved: false,
-    type: MediaType.Photo,
-    uri: "/private/app/captured.jpg",
-    webPath: "capacitor://camera/captured.jpg",
-    ...overrides,
-  };
-}
 
 describe("native response photo capture", () => {
   const context = { sessionId: "session-1", promptId: "prompt-1" };
@@ -34,7 +24,12 @@ describe("native response photo capture", () => {
   };
 
   it("opens the rear camera without saving and returns a JPEG file", async () => {
-    const takePhoto = vi.fn(async (_options: TakePhotoOptions) => result());
+    const getPhoto = vi.fn(async (_options: ImageOptions) => ({
+      format: "jpeg",
+      path: "/private/app/captured.jpg",
+      saved: false,
+      webPath: "capacitor://camera/captured.jpg",
+    }));
     const fetchImage = vi.fn(async () =>
       Response.json(new Uint8Array([0xff, 0xd8, 0xff, 0xd9]), {
         headers: { "Content-Type": "image/jpeg" },
@@ -42,7 +37,7 @@ describe("native response photo capture", () => {
     );
     const fileCleaner = { deleteFile: vi.fn(async () => undefined) };
     const capture = createNativeResponsePhotoCapture(
-      { takePhoto },
+      { getPhoto },
       fetchImage as typeof fetch,
       fileCleaner,
       pendingStore(),
@@ -50,12 +45,13 @@ describe("native response photo capture", () => {
 
     const file = await capture.capture(context);
 
-    expect(takePhoto).toHaveBeenCalledWith(
+    expect(getPhoto).toHaveBeenCalledWith(
       expect.objectContaining({
-        cameraDirection: CameraDirection.Rear,
+        direction: CameraDirection.Rear,
         correctOrientation: true,
-        encodingType: EncodingType.JPEG,
+        resultType: CameraResultType.Uri,
         saveToGallery: false,
+        source: CameraSource.Camera,
       }),
     );
     expect(fetchImage).toHaveBeenCalledWith("capacitor://camera/captured.jpg");
@@ -72,10 +68,25 @@ describe("native response photo capture", () => {
   it("treats closing the camera as cancellation", async () => {
     const capture = createNativeResponsePhotoCapture(
       {
-        takePhoto: vi.fn(async () => {
+        getPhoto: vi.fn(async () => {
           throw Object.assign(new Error("cancelled"), {
             code: "OS-PLUG-CAMR-0006",
           });
+        }),
+      },
+      undefined,
+      undefined,
+      pendingStore(),
+    );
+
+    await expect(capture.capture(context)).resolves.toBeNull();
+  });
+
+  it("treats closing the legacy Android camera as cancellation", async () => {
+    const capture = createNativeResponsePhotoCapture(
+      {
+        getPhoto: vi.fn(async () => {
+          throw new Error("User cancelled photos app");
         }),
       },
       undefined,
@@ -90,24 +101,25 @@ describe("native response photo capture", () => {
     const missingFileCleaner = { deleteFile: vi.fn(async () => undefined) };
     const missing = createNativeResponsePhotoCapture(
       {
-        takePhoto: vi.fn(async () => ({
-          saved: false,
-          type: MediaType.Photo,
-          uri: "/private/app/missing.jpg",
-        })),
+        getPhoto: vi.fn(async () => ({ format: "jpeg", saved: false })),
       },
       undefined,
       missingFileCleaner,
       pendingStore(),
     );
     await expect(missing.capture(context)).rejects.toThrow("usable photo");
-    expect(missingFileCleaner.deleteFile).toHaveBeenCalledWith({
-      path: "/private/app/missing.jpg",
-    });
+    expect(missingFileCleaner.deleteFile).not.toHaveBeenCalled();
 
     const fileCleaner = { deleteFile: vi.fn(async () => undefined) };
     const empty = createNativeResponsePhotoCapture(
-      { takePhoto: vi.fn(async () => result()) },
+      {
+        getPhoto: vi.fn(async () => ({
+          format: "jpeg",
+          path: "/private/app/captured.jpg",
+          saved: false,
+          webPath: "capacitor://camera/captured.jpg",
+        })),
+      },
       vi.fn(async () => new Response()) as typeof fetch,
       fileCleaner,
       pendingStore(),
@@ -120,7 +132,14 @@ describe("native response photo capture", () => {
 
   it("rejects the capture if its native temporary file cannot be removed", async () => {
     const capture = createNativeResponsePhotoCapture(
-      { takePhoto: vi.fn(async () => result()) },
+      {
+        getPhoto: vi.fn(async () => ({
+          format: "jpeg",
+          path: "/private/app/captured.jpg",
+          saved: false,
+          webPath: "capacitor://camera/captured.jpg",
+        })),
+      },
       vi.fn(
         async () =>
           new Response("jpeg", {
@@ -145,7 +164,7 @@ describe("native response photo capture", () => {
     await store.set({ key: "unused", value: JSON.stringify(context) });
     const fileCleaner = { deleteFile: vi.fn(async () => undefined) };
     const capture = createNativeResponsePhotoCapture(
-      { takePhoto: vi.fn() },
+      { getPhoto: vi.fn() },
       vi.fn(
         async () =>
           new Response("jpeg", {
@@ -158,9 +177,14 @@ describe("native response photo capture", () => {
 
     await capture.handleRestoredResult({
       pluginId: "Camera",
-      methodName: "takePhoto",
+      methodName: "getPhoto",
       success: true,
-      data: result(),
+      data: {
+        format: "jpeg",
+        path: "/private/app/captured.jpg",
+        saved: false,
+        webPath: "capacitor://camera/captured.jpg",
+      },
     });
     const listener = vi.fn();
     capture.subscribe(listener);
@@ -185,7 +209,7 @@ describe("native response photo capture", () => {
       .mockRejectedValueOnce(new Error("busy"))
       .mockResolvedValueOnce(undefined);
     const capture = createNativeResponsePhotoCapture(
-      { takePhoto: vi.fn() },
+      { getPhoto: vi.fn() },
       vi.fn(async () => new Response("jpeg")) as typeof fetch,
       { deleteFile },
       store,
@@ -195,9 +219,14 @@ describe("native response photo capture", () => {
 
     await capture.handleRestoredResult({
       pluginId: "Camera",
-      methodName: "takePhoto",
+      methodName: "getPhoto",
       success: true,
-      data: result(),
+      data: {
+        format: "jpeg",
+        path: "/private/app/captured.jpg",
+        saved: false,
+        webPath: "capacitor://camera/captured.jpg",
+      },
     });
     expect(listener).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -232,7 +261,14 @@ describe("native response photo capture", () => {
     };
     const deleteFile = vi.fn(async () => undefined);
     const capture = createNativeResponsePhotoCapture(
-      { takePhoto: vi.fn(async () => result()) },
+      {
+        getPhoto: vi.fn(async () => ({
+          format: "jpeg",
+          path: "/private/app/captured.jpg",
+          saved: false,
+          webPath: "capacitor://camera/captured.jpg",
+        })),
+      },
       vi.fn(async () => new Response("jpeg")) as typeof fetch,
       { deleteFile },
       store,
@@ -249,7 +285,7 @@ describe("native response photo capture", () => {
     const store = pendingStore();
     await store.set({ key: "unused", value: JSON.stringify(context) });
     const capture = createNativeResponsePhotoCapture(
-      { takePhoto: vi.fn() },
+      { getPhoto: vi.fn() },
       undefined,
       undefined,
       store,
@@ -259,7 +295,7 @@ describe("native response photo capture", () => {
 
     await capture.handleRestoredResult({
       pluginId: "Camera",
-      methodName: "takePhoto",
+      methodName: "getPhoto",
       success: true,
       data: { type: MediaType.Photo, saved: false },
     });
