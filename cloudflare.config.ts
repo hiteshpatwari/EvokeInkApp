@@ -58,6 +58,9 @@ export default defineConfig({
       notFoundHandling: "none",
       runWorkerFirst: ["/*", "!/_next/static/*", "!/*/_next/static/*"],
     },
+    // Keep the dashboard-owned production domain represented in source so
+    // strict deployments can prove they will not remove the live route.
+    domains: ["evokeink.hiteshpatwari.com"],
     env: {
       ASSETS: bindings.assets(),
       ...providerSecretBindings,
@@ -112,6 +115,11 @@ export default defineConfig({
           "0.03",
         ),
       ),
+      // Deprecated compatibility binding. The runtime no longer reads this
+      // value; transcription and prompt generation share
+      // AI_MONTHLY_BUDGET_USD. Preserve the existing remote binding until a
+      // separately reviewed configuration cleanup can remove it atomically.
+      HANDWRITING_TRANSCRIPTION_MONTHLY_BUDGET_USD: bindings.text("50"),
       APP_ALLOWED_ORIGINS: bindings.text(
         environmentText("APP_ALLOWED_ORIGINS", "http://localhost:3001"),
       ),
