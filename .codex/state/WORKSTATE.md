@@ -251,6 +251,23 @@ and backup format marker remain unchanged as internal data-format identifiers.
   QA package, bundled-secret scan, full 51-file/314-test suite, formatting,
   lint, root/mobile types, Next production build, dependency audit, and diff
   check passed.
+- Pushed package-identity commit `9eb8d6986d17435c0902fb2cb28a730543cd42c4`
+  to `main`. Release Automation run `40737583873` passed verification,
+  Cloudflare deployment/probe, signed Android APK/AAB build, secret scan, and
+  artifact upload. The downloaded APK and AAB hashes matched; the APK reports
+  `app.evokeink.mobile`, label `Evoke Ink`, version `1.0`/code `1`, SDK 36, one
+  RSA-4096 signer, and APK Signature Scheme v2. The signed APK installed and
+  launched successfully on the S24 Ultra. The superseded
+  `app.readreflect.mobile` package remains separately installed and was not
+  removed because Android treats the new ID as a different app.
+- Replaced every legacy and adaptive Android launcher asset that still contained
+  Capacitor's default blue icon. `src/app/icon.svg` is now the canonical source;
+  `pnpm icons:android` deterministically regenerates five density sets plus the
+  adaptive foreground and background. The generated assets visually match the
+  Evoke Ink page/ink/spark mark and remain inside Android's adaptive safe zone.
+  A regression verifies canonical background color and PNG dimensions. Full
+  validation passed: 52 files / 315 tests, types, lint, formatting, web build,
+  dependency audit, Android QA package, and bundled-secret scan.
 - Added `docs/GOOGLE_PLAY_RELEASE_RUNBOOK.md`, an operator-ready path from the
   verified GitHub AAB through Play App Signing, store setup, privacy/Data safety
   and target-audience declarations, internal and closed testing, physical-device
@@ -265,9 +282,9 @@ and backup format marker remain unchanged as internal data-format identifiers.
   intentionally receive no live provider access until verified device
   attestation exists.
 - Google Play account ownership, listing preparation, internal-track upload,
-  review, and submission remain owner work. The signed AAB is ready for that
-  process; workflow artifact retention is not permanent storage for the upload
-  keystore or release binaries.
+  review, and submission remain owner work. The signed `app.evokeink.mobile`
+  AAB from run `40737583873` is ready for that process; workflow artifact
+  retention is not permanent storage for the upload keystore or release binaries.
 - Physical-device checks for enlarged system text and safe-area behavior remain
   release acceptance work; browser/native emulation passed.
 - Existing transcription provider/privacy gates, native attestation requirement,
@@ -275,9 +292,9 @@ and backup format marker remain unchanged as internal data-format identifiers.
 
 ## Immediate next action
 
-Escrow the Android upload keystore securely, retain the verified signed release
-artifact, then follow `docs/GOOGLE_PLAY_RELEASE_RUNBOOK.md` to create the Play
-app and start internal testing. The privacy-policy URL and publisher decisions
-are explicit pre-upload blockers. Continue monitoring the OpenAI $3 hard limit;
-do not enable native or handwriting-provider traffic until its separate release
-gates are satisfied.
+Download and retain the verified artifact from run `40737583873`, then follow
+`docs/GOOGLE_PLAY_RELEASE_RUNBOOK.md` to create the Play app with package
+`app.evokeink.mobile` and start internal testing. Escrow the upload keystore;
+the privacy-policy URL and publisher decisions remain explicit store-release
+blockers. Continue monitoring the OpenAI $3 hard limit; do not enable native or
+handwriting-provider traffic until its separate release gates are satisfied.

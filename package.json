@@ -26,6 +26,7 @@
     "mobile:build": "pnpm --filter @evoke-ink/mobile build",
     "mobile:sync": "pnpm --filter @evoke-ink/mobile cap:sync",
     "mobile:secrets": "pnpm --filter @evoke-ink/mobile secrets:check",
+    "icons:android": "node scripts/generate-android-icons.mjs",
     "release:android": "pwsh -NoLogo -NoProfile -File scripts/Invoke-AndroidRelease.ps1",
     "release:android:qa": "pwsh -NoLogo -NoProfile -File scripts/Invoke-AndroidRelease.ps1 -BuildType Debug",
     "release:android:install": "pwsh -NoLogo -NoProfile -File scripts/Invoke-AndroidRelease.ps1 -Install",
@@ -60,6 +61,7 @@
     "jsdom": "27.2.0",
     "oxlint": "1.87.0",
     "prettier": "3.7.4",
+    "sharp": "0.35.5",
     "typescript": "6.0.3",
     "vite": "8.3.3",
     "vitest": "5.0.4"
