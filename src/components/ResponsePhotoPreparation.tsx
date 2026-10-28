@@ -18,6 +18,8 @@ export interface ResponsePhotoPreparationProps {
   processPhoto?: typeof processResponsePhoto;
   transcribePhoto?: (image: Blob) => Promise<HandwritingTranscription>;
   capturePhoto?: () => Promise<File | null>;
+  initialPhoto?: File;
+  onInitialPhotoConsumed?: () => void;
 }
 
 const GENERIC_PHOTO_ERROR =
@@ -29,6 +31,8 @@ export function ResponsePhotoPreparation({
   processPhoto = processResponsePhoto,
   transcribePhoto = requestHandwritingTranscription,
   capturePhoto,
+  initialPhoto,
+  onInitialPhotoConsumed,
 }: ResponsePhotoPreparationProps) {
   const [photo, setPhoto] = useState<ProcessedResponsePhoto | null>(null);
   const [transcript, setTranscript] = useState("");
@@ -49,6 +53,7 @@ export function ResponsePhotoPreparation({
   const photoRef = useRef<ProcessedResponsePhoto | null>(null);
   const mountedRef = useRef(true);
   const operationRef = useRef(0);
+  const initialPhotoPreparedRef = useRef(false);
 
   const storePhoto = (next: ProcessedResponsePhoto | null) => {
     photoRef.current = next;
@@ -138,6 +143,16 @@ export function ResponsePhotoPreparation({
       }
     }
   };
+
+  useEffect(() => {
+    if (!initialPhoto || initialPhotoPreparedRef.current) return;
+    const timer = window.setTimeout(() => {
+      initialPhotoPreparedRef.current = true;
+      onInitialPhotoConsumed?.();
+      void prepare(initialPhoto);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [initialPhoto, onInitialPhotoConsumed]);
 
   const selectPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

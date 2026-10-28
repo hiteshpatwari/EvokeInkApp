@@ -28,6 +28,8 @@ interface ResponseReviewProps {
     uncertainSegments: string[];
   }>;
   capturePhoto?: () => Promise<File | null>;
+  initialPhoto?: File;
+  onInitialPhotoConsumed?: () => void;
 }
 
 const UNAVAILABLE_MESSAGE =
@@ -40,12 +42,14 @@ export function ResponseReview({
   processPhoto = processResponsePhoto,
   transcribePhoto,
   capturePhoto,
+  initialPhoto,
+  onInitialPhotoConsumed,
 }: ResponseReviewProps) {
   const [responseText, setResponseText] = useState("");
   const [feedback, setFeedback] = useState<AnswerFeedback | null>(null);
   const [error, setError] = useState("");
   const [reviewing, setReviewing] = useState(false);
-  const [photoMode, setPhotoMode] = useState(false);
+  const [photoMode, setPhotoMode] = useState(Boolean(initialPhoto));
   const [transcriptNotice, setTranscriptNotice] = useState("");
   const responseRef = useRef<HTMLTextAreaElement>(null);
   const mountedRef = useRef(true);
@@ -137,6 +141,8 @@ export function ResponseReview({
           processPhoto={processPhoto}
           {...(transcribePhoto ? { transcribePhoto } : {})}
           {...(capturePhoto ? { capturePhoto } : {})}
+          {...(initialPhoto ? { initialPhoto } : {})}
+          {...(onInitialPhotoConsumed ? { onInitialPhotoConsumed } : {})}
           onUseTypedEntry={() => {
             setPhotoMode(false);
             window.setTimeout(() => responseRef.current?.focus(), 0);

@@ -123,6 +123,35 @@ describe("typed response coaching", () => {
     repository.saveSession(session);
   });
 
+  it("returns to the exact response prompt when Android restores a camera result", async () => {
+    let restore!: (result: {
+      context: { sessionId: string; promptId: string };
+      file?: File;
+      error?: string;
+    }) => void;
+    const subscribe = vi.fn((listener: typeof restore) => {
+      restore = listener;
+      return () => undefined;
+    });
+
+    render(<AppShell subscribeToRestoredResponsePhoto={subscribe} />);
+    await screen.findByRole("button", { name: "Saved reflections" });
+    act(() => {
+      restore({
+        context: { sessionId: session.id, promptId: "prompt-two" },
+        file: new File(["jpeg"], "restored.jpg", { type: "image/jpeg" }),
+      });
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Review this response" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(session.prompts[1]!.text)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Prepare one response photo" }),
+    ).toBeInTheDocument();
+  });
+
   it("keeps the selected prompt visible, validates locally, and announces loading", async () => {
     let resolveRequest!: (response: Response) => void;
     const fetchMock = vi.fn(

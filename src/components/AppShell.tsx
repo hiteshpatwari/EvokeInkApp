@@ -95,12 +95,23 @@ const emptyCreation: CreationState = {
 
 type AppShellProps = {
   storage?: FlushableStorage;
-  captureResponsePhoto?: () => Promise<File | null>;
+  captureResponsePhoto?: (context: {
+    sessionId: string;
+    promptId: string;
+  }) => Promise<File | null>;
+  subscribeToRestoredResponsePhoto?: (
+    listener: (result: {
+      context: { sessionId: string; promptId: string };
+      file?: File;
+      error?: string;
+    }) => void,
+  ) => () => void;
 };
 
 export function AppShell({
   storage,
   captureResponsePhoto,
+  subscribeToRestoredResponsePhoto,
 }: AppShellProps = {}) {
   const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<AppScreen>("home");
@@ -119,6 +130,8 @@ export function AppShell({
   );
   const [responseReviewPrompt, setResponseReviewPrompt] =
     useState<WorksheetPrompt | null>(null);
+  const [restoredResponsePhoto, setRestoredResponsePhoto] =
+    useState<File | null>(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [storageDiagnostics, setStorageDiagnostics] = useState<
@@ -163,6 +176,23 @@ export function AppShell({
       active = false;
     };
   }, [storage]);
+
+  useEffect(() => {
+    if (!ready || !subscribeToRestoredResponsePhoto) return;
+    return subscribeToRestoredResponsePhoto(({ context, file, error }) => {
+      const session = sessions.find((item) => item.id === context.sessionId);
+      const prompt = session?.prompts.find(
+        (item) => item.id === context.promptId,
+      );
+      if (!session || !prompt) return;
+      setWorkingSession(session);
+      setResponseReviewPrompt(prompt);
+      setRestoredResponsePhoto(file ?? null);
+      setError(error ?? "");
+      setNotice(file ? "Photo restored after Android reopened Evoke Ink." : "");
+      setScreen("response");
+    });
+  }, [ready, sessions, subscribeToRestoredResponsePhoto]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -1681,9 +1711,22 @@ export function AppShell({
           childSnapshot={workingSession.childSnapshot}
           prompt={responseReviewPrompt}
           {...(captureResponsePhoto
-            ? { capturePhoto: captureResponsePhoto }
+            ? {
+                capturePhoto: () =>
+                  captureResponsePhoto({
+                    sessionId: workingSession.id,
+                    promptId: responseReviewPrompt.id,
+                  }),
+              }
+            : {})}
+          {...(restoredResponsePhoto
+            ? {
+                initialPhoto: restoredResponsePhoto,
+                onInitialPhotoConsumed: () => setRestoredResponsePhoto(null),
+              }
             : {})}
           onDone={() => {
+            setRestoredResponsePhoto(null);
             setResponseReviewPrompt(null);
             setScreen("preview");
           }}

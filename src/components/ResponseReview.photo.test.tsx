@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProcessedResponsePhoto } from "@/client/responsePhotoProcessing";
 import type { ChildProfile, WorksheetPrompt } from "@/domain/schemas";
@@ -56,6 +57,59 @@ afterEach(() => {
 });
 
 describe("response photo preparation", () => {
+  it("prepares a photo restored after Android recreates the app", async () => {
+    const user = userEvent.setup();
+    const restored = new File(
+      [new Uint8Array([0xff, 0xd8, 0xff, 0xd9])],
+      "restored.jpg",
+      {
+        type: "image/jpeg",
+      },
+    );
+    const processPhoto = vi.fn(async () => processedPhoto());
+    const onInitialPhotoConsumed = vi.fn();
+    function RestoredPhotoHarness() {
+      const [initialPhoto, setInitialPhoto] = useState<File | null>(restored);
+      return (
+        <ResponseReview
+          childSnapshot={profile}
+          prompt={prompt}
+          onDone={vi.fn()}
+          {...(initialPhoto ? { initialPhoto } : {})}
+          onInitialPhotoConsumed={() => {
+            onInitialPhotoConsumed();
+            setInitialPhoto(null);
+          }}
+          processPhoto={processPhoto}
+        />
+      );
+    }
+
+    render(
+      <StrictMode>
+        <RestoredPhotoHarness />
+      </StrictMode>,
+    );
+
+    expect(
+      await screen.findByAltText("Selected response photo"),
+    ).toBeInTheDocument();
+    expect(processPhoto).toHaveBeenCalledOnce();
+    expect(processPhoto).toHaveBeenCalledWith(restored, {});
+    expect(onInitialPhotoConsumed).toHaveBeenCalledOnce();
+    expect(screen.queryByLabelText("Student response")).not.toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Discard photo" }));
+    await user.click(
+      screen.getByRole("button", { name: "Type the response instead" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Use a photo" }));
+    expect(
+      screen.queryByAltText("Selected response photo"),
+    ).not.toBeInTheDocument();
+    expect(processPhoto).toHaveBeenCalledOnce();
+  });
+
   it("opens the native camera and prepares the captured photo without a download-upload step", async () => {
     const user = userEvent.setup();
     const captured = new File(

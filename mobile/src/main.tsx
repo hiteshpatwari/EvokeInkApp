@@ -8,7 +8,7 @@ import { installWorksheetExporter } from "@/pdf/worksheetExport";
 import { nativeWorksheetExporter } from "./nativeWorksheetExport";
 import { createMobilePersistence } from "./nativePersistence";
 import { bootstrapMobileApplication } from "./bootstrap";
-import { captureNativeResponsePhoto } from "./nativeResponsePhotoCapture";
+import { nativeResponsePhotoCapture } from "./nativeResponsePhotoCapture";
 import "../../src/app/globals.css";
 
 declare const __PROMPT_API_URL__: string;
@@ -25,6 +25,10 @@ void installNativeBackHandler(App, window);
 export async function startMobileApplication() {
   const root = document.getElementById("root");
   if (!root) throw new Error("Mobile application root is missing");
+  await App.addListener("appRestoredResult", (event) => {
+    void nativeResponsePhotoCapture.handleRestoredResult(event);
+  });
+  await nativeResponsePhotoCapture.retryPendingCleanup();
   await bootstrapMobileApplication(
     () => createMobilePersistence(window.localStorage),
     (storage) =>
@@ -32,7 +36,10 @@ export async function startMobileApplication() {
         <StrictMode>
           <AppShell
             storage={storage}
-            captureResponsePhoto={captureNativeResponsePhoto}
+            captureResponsePhoto={nativeResponsePhotoCapture.capture}
+            subscribeToRestoredResponsePhoto={
+              nativeResponsePhotoCapture.subscribe
+            }
           />
         </StrictMode>,
       ),
