@@ -335,6 +335,16 @@ export function ResponsePhotoPreparation({
           {capturing ? "Opening camera..." : "Open camera"}
         </button>
       )}
+      {!photo && !processing && (
+        <button
+          type="button"
+          className="secondary-button response-photo__typed-action"
+          disabled={capturing || extracting}
+          onClick={useTypedEntry}
+        >
+          Type the response instead
+        </button>
+      )}
       <label
         className={
           capturePhoto
@@ -537,15 +547,6 @@ export function ResponsePhotoPreparation({
             </button>
           </div>
         </div>
-      )}
-      {!photo && !processing && (
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={useTypedEntry}
-        >
-          Type the response instead
-        </button>
       )}
     </section>
   );

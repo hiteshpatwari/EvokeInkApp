@@ -101,13 +101,18 @@ if (-not $env:ANDROID_HOME -or -not (Test-Path -LiteralPath $env:ANDROID_HOME -P
     throw 'ANDROID_HOME must point to an installed Android SDK.'
 }
 
+$pnpmCommand = Get-Command pnpm -ErrorAction SilentlyContinue
+if (-not $pnpmCommand) {
+    throw 'pnpm must be available on PATH. Enable Corepack or install the repository-required pnpm version before building Android.'
+}
+
 $env:VITE_PROMPT_API_URL = $PromptApiUrl
 Push-Location $projectRoot
 $locationPushed = $true
-    & corepack pnpm mobile:build
+    & $pnpmCommand.Source mobile:build
     if ($LASTEXITCODE -ne 0) { throw 'Mobile web build failed.' }
 
-    & corepack pnpm mobile:sync
+    & $pnpmCommand.Source mobile:sync
     if ($LASTEXITCODE -ne 0) { throw 'Capacitor Android synchronization failed.' }
 
     if (-not $IsWindows) {
@@ -131,7 +136,7 @@ $locationPushed = $true
 
     $artifactArguments = @('--artifact', $apkPath)
     if ($bundlePath) { $artifactArguments += @('--artifact', $bundlePath) }
-    & corepack pnpm --filter '@evoke-ink/mobile' secrets:check -- @artifactArguments
+    & $pnpmCommand.Source --filter '@evoke-ink/mobile' secrets:check -- @artifactArguments
     if ($LASTEXITCODE -ne 0) { throw 'Mobile artifact secret scan failed.' }
 
     $artifacts = @($apkPath)

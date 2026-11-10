@@ -1004,7 +1004,8 @@ textarea {
   font-weight: 750;
 }
 .response-photo__camera-action,
-.response-photo__picker.secondary-button {
+.response-photo__picker.secondary-button,
+.response-photo__typed-action {
   justify-self: start;
 }
 .response-photo input[type="file"] {

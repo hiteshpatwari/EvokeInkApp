@@ -145,6 +145,36 @@ describe("response photo preparation", () => {
     ).toBeInTheDocument();
   });
 
+  it("returns directly to typed entry before a photo is selected", async () => {
+    const user = userEvent.setup();
+    const capturePhoto = vi.fn();
+    const processPhoto = vi.fn();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ResponseReview
+        childSnapshot={profile}
+        prompt={prompt}
+        onDone={vi.fn()}
+        capturePhoto={capturePhoto}
+        processPhoto={processPhoto}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Photograph handwritten answer" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Type the response instead" }),
+    );
+
+    expect(screen.getByLabelText("Student response")).toBeVisible();
+    expect(capturePhoto).not.toHaveBeenCalled();
+    expect(processPhoto).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("uploads only after explicit consent, confirms extracted text, then sends text-only feedback", async () => {
     const user = userEvent.setup();
     const dispose = vi.fn();

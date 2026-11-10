@@ -11,8 +11,8 @@ android {
         applicationId "app.evokeink.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         def playIntegrityProjectNumber = System.getenv('PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER') ?: '0'
         if (!(playIntegrityProjectNumber ==~ /[0-9]+/)) {
